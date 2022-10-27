@@ -1,8 +1,6 @@
 use scriptant::*;
 
 fn main() -> Result<()> {
-    // use_default_logger();
-
     fs::create_dir("tmp")?;
 
     fs::write("tmp/a.txt", "abc")?;

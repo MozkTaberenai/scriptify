@@ -1,8 +1,6 @@
 use scriptant::*;
 
 fn main() -> Result<()> {
-    // use_default_logger();
-
     #[cfg(feature = "tracing")]
     tracing::info!(current_dir = ?std::env::current_dir()?);
     env::set_current_dir("src")?;
