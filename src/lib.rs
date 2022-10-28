@@ -1,4 +1,4 @@
-pub use std::ffi::OsStr;
+pub use std::ffi::{OsStr, OsString};
 pub use std::path::{Path, PathBuf};
 
 pub use anyhow::{self, bail, ensure, Result};
