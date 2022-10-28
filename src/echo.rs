@@ -4,33 +4,29 @@ pub struct Echo {
     count: usize,
 }
 
+#[derive(Clone, Copy)]
 enum Stream {
     Stdout,
     Stderr,
 }
 
+use Stream::*;
+
 impl Default for Echo {
     fn default() -> Self {
         let stream = match std::env::var_os("ECHO_STDERR").is_some() {
-            true => Stream::Stderr,
-            false => Stream::Stdout,
+            true => Stderr,
+            false => Stdout,
         };
+
         let disabled = std::env::var_os("NO_ECHO").is_some();
+
         Self {
             stream,
             disabled,
             count: 0,
         }
     }
-}
-
-macro_rules! p {
-    ($out:expr, $($arg:tt)*) => {
-        match $out {
-            Stream::Stdout => print!($($arg)*),
-            Stream::Stderr => eprint!($($arg)*),
-        }
-    };
 }
 
 impl Echo {
@@ -48,10 +44,13 @@ impl Echo {
             return self;
         }
 
-        match self.count {
-            0 => p!(self.stream, "{}", arg),
-            _ => p!(self.stream, " {}", arg),
+        match (self.count, self.stream) {
+            (0, Stdout) => print!("{}", arg),
+            (0, Stderr) => eprint!("{}", arg),
+            (_, Stdout) => print!(" {}", arg),
+            (_, Stderr) => eprint!(" {}", arg),
         }
+
         self.count += 1;
 
         self
@@ -63,8 +62,8 @@ impl Echo {
         }
 
         match self.stream {
-            Stream::Stdout => println!(),
-            Stream::Stderr => eprintln!(),
+            Stdout => println!(),
+            Stderr => eprintln!(),
         }
     }
 }
@@ -82,6 +81,7 @@ macro_rules! echo {
         echo.end();
     }};
 }
+
 #[macro_export]
 macro_rules! echo_err {
     ($($arg:expr),* $(,)?) => {{
@@ -94,7 +94,7 @@ macro_rules! echo_err {
 use crate::AnsiStyleExt;
 
 pub fn prefix(tag: &'static str) -> String {
-    format!("{} {}", tag.bright_black(), ">".green())
+    format!("{} {}", tag.bright_black(), "%".green())
 }
 
 pub fn error<E: std::error::Error>(err: E) -> E {

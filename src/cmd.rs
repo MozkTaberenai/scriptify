@@ -75,7 +75,7 @@ impl Cmd {
         echo.out(&*ECHO_PREFIX);
 
         if self.piped {
-            echo.out("->".italic().magenta().to_string());
+            echo.out("|".magenta());
         }
 
         if let Some(current_dir) = self.inner.get_current_dir() {
@@ -125,8 +125,6 @@ impl Cmd {
             echo.out(arg.to_string_lossy().underline().bold().to_string());
         }
 
-        // echo.end();
-
         #[cfg(feature = "tracing")]
         tracing::info!(
             program=?self.inner.get_program(),
@@ -165,9 +163,13 @@ impl Cmd {
                 Err(echo::error(err))?
             }
             Ok(output) => {
-                echo.out("->".italic().magenta());
-                echo.out(format!("read stdout: {} bytes,", output.stdout.len()));
-                echo.out(format!("stderr: {} bytes", output.stderr.len()));
+                echo.out("| read output".magenta());
+                if !output.stdout.is_empty() {
+                    echo.out(format!("stdout: {} bytes", output.stdout.len()));
+                }
+                if !output.stderr.is_empty() {
+                    echo.out(format!("stderr: {} bytes", output.stderr.len()));
+                }
                 echo.end();
                 Ok(output)
             }

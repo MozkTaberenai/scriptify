@@ -11,11 +11,11 @@ fn main() -> Result<()> {
 
     cmd!("ls", "-alF").current_dir("src").run()?;
 
-    _ = cmd!("unknown_command").run();
+    _ = cmd!("unknown_command", "and", "run").run();
 
-    _ = cmd!("unknown_command2").output();
+    _ = cmd!("unknown_command", "and", "output").output();
 
-    _ = cmd!("sh", "-c", "exit 1").run();
+    _ = cmd!("sh", "-c", "echo from sh; exit 1").run();
 
     cmd!("date").pipe(cmd!("cat"))?.pipe(cmd!("cat"))?.run()?;
 
