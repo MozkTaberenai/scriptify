@@ -96,7 +96,7 @@ pub trait EchoErrExt {
     fn echo_err(self) -> Self;
 }
 
-impl<T, E: std::error::Error> EchoErrExt for std::result::Result<T, E> {
+impl<T, E: std::fmt::Display> EchoErrExt for std::result::Result<T, E> {
     fn echo_err(self) -> Self {
         if let Err(ref err) = self {
             echo_err!(err);
