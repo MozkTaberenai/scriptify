@@ -13,9 +13,7 @@ pub fn rename(from: impl AsRef<Path>, to: impl AsRef<Path>) -> Result<()> {
         "->",
         to.to_string_lossy().bold().underline(),
     );
-    #[cfg(feature = "tracing")]
-    tracing::info!(?from, ?to, "rename");
-    Ok(std::fs::rename(from, to).map_err(echo::error)?)
+    Ok(std::fs::rename(from, to).echo_err()?)
 }
 
 pub fn copy(from: impl AsRef<Path>, to: impl AsRef<Path>) -> Result<u64> {
@@ -28,9 +26,7 @@ pub fn copy(from: impl AsRef<Path>, to: impl AsRef<Path>) -> Result<u64> {
         "->",
         to.to_string_lossy().bold().underline(),
     );
-    #[cfg(feature = "tracing")]
-    tracing::info!(?from, ?to, "copy");
-    Ok(std::fs::copy(from, to).map_err(echo::error)?)
+    Ok(std::fs::copy(from, to).echo_err()?)
 }
 
 pub fn hard_link(original: impl AsRef<Path>, link: impl AsRef<Path>) -> Result<()> {
@@ -43,9 +39,7 @@ pub fn hard_link(original: impl AsRef<Path>, link: impl AsRef<Path>) -> Result<(
         "->",
         link.to_string_lossy().bold().underline(),
     );
-    #[cfg(feature = "tracing")]
-    tracing::info!(?original, ?link, "hard_link");
-    Ok(std::fs::hard_link(original, link).map_err(echo::error)?)
+    Ok(std::fs::hard_link(original, link).echo_err()?)
 }
 
 pub fn create_dir(path: impl AsRef<Path>) -> Result<()> {
@@ -55,9 +49,7 @@ pub fn create_dir(path: impl AsRef<Path>) -> Result<()> {
         "create_dir".bold().cyan(),
         path.to_string_lossy().bold().underline(),
     );
-    #[cfg(feature = "tracing")]
-    tracing::info!(?path, "create_dir");
-    Ok(std::fs::create_dir(path).map_err(echo::error)?)
+    Ok(std::fs::create_dir(path).echo_err()?)
 }
 
 pub fn create_dir_all(path: impl AsRef<Path>) -> Result<()> {
@@ -67,9 +59,17 @@ pub fn create_dir_all(path: impl AsRef<Path>) -> Result<()> {
         "create_dir_all".bold().cyan(),
         path.to_string_lossy().bold().underline(),
     );
-    #[cfg(feature = "tracing")]
-    tracing::info!(?path, "create_dir_all");
-    Ok(std::fs::create_dir_all(path).map_err(echo::error)?)
+    Ok(std::fs::create_dir_all(path).echo_err()?)
+}
+
+pub fn metadata(path: impl AsRef<Path>) -> Result<std::fs::Metadata> {
+    let path = path.as_ref();
+    echo!(
+        &*ECHO_PREFIX,
+        "metadata".bold().cyan(),
+        path.to_string_lossy().bold().underline(),
+    );
+    Ok(std::fs::metadata(path).echo_err()?)
 }
 
 pub fn read_dir(path: impl AsRef<Path>) -> Result<std::fs::ReadDir> {
@@ -79,9 +79,7 @@ pub fn read_dir(path: impl AsRef<Path>) -> Result<std::fs::ReadDir> {
         "read_dir".bold().cyan(),
         path.to_string_lossy().bold().underline(),
     );
-    #[cfg(feature = "tracing")]
-    tracing::info!(?path, "read_dir");
-    Ok(std::fs::read_dir(path).map_err(echo::error)?)
+    Ok(std::fs::read_dir(path).echo_err()?)
 }
 
 pub fn read(path: impl AsRef<Path>) -> Result<Vec<u8>> {
@@ -91,9 +89,7 @@ pub fn read(path: impl AsRef<Path>) -> Result<Vec<u8>> {
         "read".bold().cyan(),
         path.to_string_lossy().bold().underline(),
     );
-    #[cfg(feature = "tracing")]
-    tracing::info!(?path, "read");
-    Ok(std::fs::read(path).map_err(echo::error)?)
+    Ok(std::fs::read(path).echo_err()?)
 }
 
 pub fn read_to_string(path: impl AsRef<Path>) -> Result<String> {
@@ -103,9 +99,7 @@ pub fn read_to_string(path: impl AsRef<Path>) -> Result<String> {
         "read_to_string".bold().cyan(),
         path.to_string_lossy().bold().underline(),
     );
-    #[cfg(feature = "tracing")]
-    tracing::info!(?path, "read_to_string");
-    Ok(std::fs::read_to_string(path).map_err(echo::error)?)
+    Ok(std::fs::read_to_string(path).echo_err()?)
 }
 
 pub fn write(path: impl AsRef<Path>, contents: impl AsRef<[u8]>) -> Result<()> {
@@ -118,9 +112,7 @@ pub fn write(path: impl AsRef<Path>, contents: impl AsRef<[u8]>) -> Result<()> {
         "->",
         path.to_string_lossy().bold().underline(),
     );
-    #[cfg(feature = "tracing")]
-    tracing::info!(?path, content_bytes=%contents.len(), "write");
-    Ok(std::fs::write(path, contents).map_err(echo::error)?)
+    Ok(std::fs::write(path, contents).echo_err()?)
 }
 
 pub fn remove_dir(path: impl AsRef<Path>) -> Result<()> {
@@ -130,9 +122,7 @@ pub fn remove_dir(path: impl AsRef<Path>) -> Result<()> {
         "remove_dir".bold().cyan(),
         path.to_string_lossy().bold().underline(),
     );
-    #[cfg(feature = "tracing")]
-    tracing::info!(?path, "remove_dir");
-    Ok(std::fs::remove_dir(path).map_err(echo::error)?)
+    Ok(std::fs::remove_dir(path).echo_err()?)
 }
 
 pub fn remove_dir_all(path: impl AsRef<Path>) -> Result<()> {
@@ -142,9 +132,7 @@ pub fn remove_dir_all(path: impl AsRef<Path>) -> Result<()> {
         "remove_dir_all".bold().cyan(),
         path.to_string_lossy().bold().underline(),
     );
-    #[cfg(feature = "tracing")]
-    tracing::info!(?path, "remove_dir_all");
-    Ok(std::fs::remove_dir_all(path).map_err(echo::error)?)
+    Ok(std::fs::remove_dir_all(path).echo_err()?)
 }
 
 pub fn remove_file(path: impl AsRef<Path>) -> Result<()> {
@@ -154,7 +142,5 @@ pub fn remove_file(path: impl AsRef<Path>) -> Result<()> {
         "remove_file".bold().cyan(),
         path.to_string_lossy().bold().underline(),
     );
-    #[cfg(feature = "tracing")]
-    tracing::info!(?path, "remove_file");
-    Ok(std::fs::remove_file(path).map_err(echo::error)?)
+    Ok(std::fs::remove_file(path).echo_err()?)
 }

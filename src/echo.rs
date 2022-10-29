@@ -1,3 +1,5 @@
+use crate::AnsiStyleExt;
+
 pub struct Echo {
     stream: Stream,
     disabled: bool,
@@ -39,7 +41,7 @@ impl Echo {
         self
     }
 
-    pub fn out(&mut self, arg: impl std::fmt::Display) -> &mut Self {
+    pub fn put(&mut self, arg: impl std::fmt::Display) -> &mut Self {
         if self.disabled {
             return self;
         }
@@ -70,14 +72,9 @@ impl Echo {
 
 #[macro_export]
 macro_rules! echo {
-    (!, $($arg:expr),* $(,)?) => {{
-        let mut echo = Echo::new();
-        $(echo.out($arg.yellow());)*
-        echo.end();
-    }};
     ($($arg:expr),* $(,)?) => {{
         let mut echo = Echo::new();
-        $(echo.out($arg);)*
+        $(echo.put($arg);)*
         echo.end();
     }};
 }
@@ -86,18 +83,24 @@ macro_rules! echo {
 macro_rules! echo_err {
     ($($arg:expr),* $(,)?) => {{
         let mut echo = Echo::new();
-        $(echo.out($arg.yellow());)*
+        $(echo.put($arg.yellow());)*
         echo.end();
     }};
 }
-
-use crate::AnsiStyleExt;
 
 pub fn prefix(tag: &'static str) -> String {
     format!("{} {}", tag.bright_black(), "%".green())
 }
 
-pub fn error<E: std::error::Error>(err: E) -> E {
-    echo_err!(&err);
-    err
+pub trait EchoErrExt {
+    fn echo_err(self) -> Self;
+}
+
+impl<T, E: std::error::Error> EchoErrExt for std::result::Result<T, E> {
+    fn echo_err(self) -> Self {
+        if let Err(ref err) = self {
+            echo_err!(err);
+        }
+        self
+    }
 }

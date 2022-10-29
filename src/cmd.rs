@@ -1,32 +1,37 @@
-use std::process::{Child, Command, Output, Stdio};
-
 use super::*;
+
+use std::process::{Child, ChildStdout, Command, Output, Stdio};
 
 use once_cell::sync::Lazy;
 static ECHO_PREFIX: Lazy<String> = Lazy::new(|| echo::prefix("cmd"));
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug)]
 pub enum Error {
-    #[error("Exit with error status code: {code}")]
     Exit { code: i32 },
-
-    #[error("Terminated by signal")]
     Terminated,
 }
 
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match *self {
+            Error::Exit { code } => write!(f, "Exit with error status code: {code}"),
+            Error::Terminated => write!(f, "Terminated by signal"),
+        }
+    }
+}
+
+impl std::error::Error for Error {}
+
 pub struct Cmd {
     inner: Command,
-    quiet: bool,
-    piped: bool,
+    echo: Option<Echo>,
 }
 
 impl Cmd {
     pub fn new(program: impl AsRef<OsStr>) -> Self {
-        Cmd {
-            inner: Command::new(program),
-            quiet: false,
-            piped: false,
-        }
+        let inner = Command::new(program);
+        let echo = None;
+        Cmd { inner, echo }
     }
 
     pub fn current_dir(mut self, dir: impl AsRef<Path>) -> Self {
@@ -60,39 +65,44 @@ impl Cmd {
     }
 
     pub fn quiet(mut self) -> Self {
-        self.quiet = true;
+        match self.echo {
+            Some(ref mut echo) => {
+                echo.quiet();
+            }
+            None => {
+                let mut echo = Echo::new();
+                echo.quiet();
+                self.echo.replace(echo);
+            }
+        }
         self
     }
 
-    fn echo(&self) -> Echo {
-        let mut echo = Echo::new();
-
-        if self.quiet {
-            echo.quiet();
-            return echo;
+    fn echo_command_info(&mut self) {
+        if self.echo.is_none() {
+            let mut echo = Echo::new();
+            echo.put(&*ECHO_PREFIX);
+            self.echo.replace(echo);
         }
 
-        echo.out(&*ECHO_PREFIX);
+        let inner = &mut self.inner;
+        let echo = self.echo.as_mut().unwrap();
 
-        if self.piped {
-            echo.out("|".magenta());
-        }
-
-        if let Some(current_dir) = self.inner.get_current_dir() {
+        if let Some(current_dir) = inner.get_current_dir() {
             let current_dir = format!(
                 "{}{}",
                 "cwd:".bright_black(),
                 current_dir.to_string_lossy().underline().bright_black(),
             );
-            echo.out(current_dir);
+            echo.put(current_dir);
         }
 
-        let envs = self.inner.get_envs();
+        let envs = inner.get_envs();
         if envs.len() > 0 {
             for (k, v) in envs {
                 match v {
                     Some(v) => {
-                        echo.out(format!(
+                        echo.put(format!(
                             "{}{}{}{}",
                             "env:".bright_black(),
                             k.to_string_lossy().underline().bright_black(),
@@ -101,7 +111,7 @@ impl Cmd {
                         ));
                     }
                     None => {
-                        echo.out(format!(
+                        echo.put(format!(
                             "{}{}{}",
                             "env:".bright_black(),
                             "!".bright_black(),
@@ -112,8 +122,8 @@ impl Cmd {
             }
         }
 
-        echo.out(
-            self.inner
+        echo.put(
+            inner
                 .get_program()
                 .to_string_lossy()
                 .bold()
@@ -121,26 +131,17 @@ impl Cmd {
                 .to_string(),
         );
 
-        for arg in self.inner.get_args() {
-            echo.out(arg.to_string_lossy().underline().bold().to_string());
+        for arg in inner.get_args() {
+            echo.put(arg.to_string_lossy().underline().bold().to_string());
         }
-
-        #[cfg(feature = "tracing")]
-        tracing::info!(
-            program=?self.inner.get_program(),
-            args=?self.inner.get_args(),
-            current_dir=?self.inner.get_current_dir(),
-            envs=?self.inner.get_envs(),
-            piped=%self.piped,
-        );
-
-        echo
     }
 
     pub fn run(mut self) -> Result<()> {
-        self.echo().end();
+        self.echo_command_info();
 
-        let status = self.inner.status().map_err(echo::error)?;
+        self.echo.unwrap().end();
+
+        let status = self.inner.status().echo_err()?;
 
         match status.success() {
             true => Ok(()),
@@ -149,26 +150,27 @@ impl Cmd {
                     Some(code) => Error::Exit { code },
                     None => Error::Terminated,
                 };
-                Err(echo::error(err))?
+                Err(err).echo_err()?
             }
         }
     }
 
     pub fn output(mut self) -> Result<Output> {
-        let mut echo = self.echo();
+        self.echo_command_info();
+        let mut echo = self.echo.take().unwrap();
 
         match self.inner.output() {
             Err(err) => {
                 echo.end();
-                Err(echo::error(err))?
+                Err(err).echo_err()?
             }
             Ok(output) => {
-                echo.out("| read output".magenta());
+                echo.put("| output".magenta());
                 if !output.stdout.is_empty() {
-                    echo.out(format!("stdout: {} bytes", output.stdout.len()));
+                    echo.put(format!("stdout: {} bytes", output.stdout.len()).magenta());
                 }
                 if !output.stderr.is_empty() {
-                    echo.out(format!("stderr: {} bytes", output.stderr.len()));
+                    echo.put(format!("stderr: {} bytes", output.stderr.len()).magenta());
                 }
                 echo.end();
                 Ok(output)
@@ -177,17 +179,44 @@ impl Cmd {
     }
 
     pub fn spawn(mut self) -> Result<Child> {
-        self.echo().end();
-        Ok(self.inner.spawn().map_err(echo::error)?)
+        self.echo_command_info();
+        self.echo.unwrap().end();
+        Ok(self.inner.spawn().echo_err()?)
     }
 
-    pub fn pipe(mut self, mut to: Self) -> Result<Self> {
+    pub fn into_inner(mut self) -> Command {
+        self.echo_command_info();
+        self.echo.unwrap().end();
+        self.inner
+    }
+
+    pub fn pipe(mut self) -> Result<Pipe> {
+        self.echo_command_info();
         self.inner.stdout(Stdio::piped());
-        let mut child = self.spawn()?;
+        let mut child = self.inner.spawn().echo_err()?;
         let stdout = child.stdout.take().unwrap();
-        to.inner.stdin(Stdio::from(stdout));
-        to.piped = true;
-        Ok(to)
+        let echo = self.echo.take().unwrap();
+        Ok(Pipe { stdout, echo })
+    }
+}
+
+pub struct Pipe {
+    stdout: ChildStdout,
+    echo: Echo,
+}
+
+impl Pipe {
+    pub fn into_reader(mut self) -> ChildStdout {
+        self.echo.put("| into_reader".magenta());
+        self.echo.end();
+        self.stdout
+    }
+
+    pub fn into_cmd(mut self, mut cmd: Cmd) -> Cmd {
+        self.echo.put("|".magenta());
+        cmd.echo.replace(self.echo);
+        cmd.inner.stdin(Stdio::from(self.stdout));
+        cmd
     }
 }
 

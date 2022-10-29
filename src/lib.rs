@@ -1,5 +1,7 @@
 pub use std::ffi::{OsStr, OsString};
+pub use std::io::{BufRead, BufReader, BufWriter, Read, Write};
 pub use std::path::{Path, PathBuf};
+pub use std::process::Stdio;
 
 pub use anyhow::{self, bail, ensure, Result};
 
@@ -8,7 +10,7 @@ pub use ansi::{style, AnsiStyle, AnsiStyleExt, AnsiStyled};
 
 #[macro_use]
 mod echo;
-pub use echo::Echo;
+pub use echo::{Echo, EchoErrExt};
 
 #[macro_use]
 mod cmd;

@@ -1,21 +1,14 @@
 [package]
 name = "scriptant"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["Mozk Taberenai <mozk@me.com>"]
 description = "Rust scripting assistant"
 
 [dependencies]
 anyhow = "1.0"
-thiserror = "1.0"
 once_cell = "1.15.0"
 smallvec = "1.10.0"
-tracing = { version = "0.1", optional = true }
-tracing-subscriber = { version = "0.3", optional = true }
-
-[features]
-default = []
-tracing = ["dep:tracing", "dep:tracing-subscriber"]
 
 [[example]]
 name = "cmd"
@@ -23,6 +16,3 @@ name = "cmd"
 name = "env"
 [[example]]
 name = "fs"
-[[example]]
-name = "tracing"
-required-features = ["tracing"]

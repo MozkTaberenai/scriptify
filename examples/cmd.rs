@@ -2,10 +2,16 @@ use scriptant::*;
 
 fn main() -> Result<()> {
     cmd!("echo", "a").run()?;
+    cmd!("echo", "with space").run()?;
 
     cmd!("echo").args((0..10).map(|n| n.to_string())).run()?;
 
-    _ = cmd!("echo", "a", "bbb", "c c  c").output()?;
+    _ = cmd!("echo", "and", "output()").output()?;
+
+    let mut reader = cmd!("echo", "-n", "abcde").pipe()?.into_reader();
+    let mut buf = String::new();
+    reader.read_to_string(&mut buf)?;
+    echo!("read_to_string:", buf);
 
     cmd!("echo", "with env").env("AAA", "aaa").run()?;
 
@@ -17,7 +23,12 @@ fn main() -> Result<()> {
 
     _ = cmd!("sh", "-c", "echo from sh; exit 1").run();
 
-    cmd!("date").pipe(cmd!("cat"))?.pipe(cmd!("cat"))?.run()?;
+    cmd!("date")
+        .pipe()?
+        .into_cmd(cmd!("cat"))
+        .pipe()?
+        .into_cmd(cmd!("cat"))
+        .run()?;
 
     Ok(())
 }

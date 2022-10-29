@@ -10,9 +10,7 @@ pub fn set_current_dir(path: impl AsRef<Path>) -> Result<()> {
         "set_current_dir".bold().cyan(),
         path.to_string_lossy().bold().underline(),
     );
-    #[cfg(feature = "tracing")]
-    tracing::info!(?path, "set_current_dir");
-    Ok(std::env::set_current_dir(path).map_err(echo::error)?)
+    Ok(std::env::set_current_dir(path).echo_err()?)
 }
 
 pub fn set_var(key: impl AsRef<OsStr>, value: impl AsRef<OsStr>) {
@@ -25,7 +23,5 @@ pub fn set_var(key: impl AsRef<OsStr>, value: impl AsRef<OsStr>) {
         "=".bright_black(),
         value.to_string_lossy().bold().underline(),
     );
-    #[cfg(feature = "tracing")]
-    tracing::info!(?key, ?value, "set_var");
     std::env::set_var(key, value);
 }
