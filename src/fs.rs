@@ -1,7 +1,7 @@
 use super::*;
 
 use once_cell::sync::Lazy;
-static ECHO_PREFIX: Lazy<String> = Lazy::new(|| echo::prefix("fs"));
+static ECHO_PREFIX: Lazy<String> = Lazy::new(|| echo::prefix(" fs"));
 
 pub fn rename(from: impl AsRef<Path>, to: impl AsRef<Path>) -> Result<()> {
     let from = from.as_ref();
