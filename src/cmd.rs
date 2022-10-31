@@ -165,7 +165,7 @@ impl Cmd {
                 Err(err).echo_err()?
             }
             Ok(output) => {
-                echo.put("| output".magenta());
+                echo.put("| read".magenta());
                 if !output.stdout.is_empty() {
                     echo.put(format!("stdout: {} bytes", output.stdout.len()).magenta());
                 }
