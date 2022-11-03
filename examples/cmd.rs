@@ -8,10 +8,15 @@ fn main() -> Result<()> {
 
     _ = cmd!("echo", "and", "output()").output()?;
 
-    let mut reader = cmd!("echo", "-n", "abcde").pipe()?.into_reader();
-    let mut buf = String::new();
-    reader.read_to_string(&mut buf)?;
-    echo!("read_to_string:", buf);
+    let (mut stdout, mut child) = cmd!("echo", "-n", "abcde").pipeout().spawn()?;
+    let mut out = String::new();
+    stdout.read_to_string(&mut out)?;
+    echo!(out);
+    child.wait()?; // this can be omitted
+
+    let (mut stdin, mut child) = cmd!("tr", "[:lower:]", "[:upper:]").pipein().spawn()?;
+    std::thread::spawn(move || stdin.write_all(b"abcde\n").unwrap());
+    child.wait()?;
 
     cmd!("echo", "with env").env("AAA", "aaa").run()?;
 
@@ -24,11 +29,25 @@ fn main() -> Result<()> {
     _ = cmd!("sh", "-c", "echo from sh; exit 1").run();
 
     cmd!("date")
-        .pipe()?
-        .into_cmd(cmd!("cat"))
-        .pipe()?
-        .into_cmd(cmd!("cat"))
+        .pipe(cmd!("rev"))
+        .pipe(cmd!("tr", "[:upper:]", "[:lower:]"))
         .run()?;
+
+    let (mut stdin, mut children) = cmd!("rev")
+        .pipe(cmd!("tr", "[:lower:]", "[:upper:]"))
+        .pipein()
+        .spawn()?;
+    std::thread::spawn(move || writeln!(stdin, "abcde").unwrap());
+    children.wait()?;
+
+    let (mut stdout, mut children) = cmd!("date", "-uR")
+        .pipe(cmd!("tr", "[:lower:]", "[:upper:]"))
+        .pipeout()
+        .spawn()?;
+    let mut out = String::new();
+    stdout.read_to_string(&mut out)?;
+    echo!(out.trim());
+    children.wait()?;
 
     Ok(())
 }
