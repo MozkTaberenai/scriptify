@@ -10,7 +10,7 @@ pub use ansi::{style, AnsiStyle, AnsiStyleExt, AnsiStyled};
 
 #[macro_use]
 mod echo;
-pub use echo::{Echo, EchoErrExt};
+pub use echo::Echo;
 
 #[macro_use]
 mod cmd;

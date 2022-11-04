@@ -10,7 +10,7 @@ pub fn set_current_dir(path: impl AsRef<Path>) -> Result<()> {
         "set_current_dir".bold().cyan(),
         path.to_string_lossy().bold().underline(),
     );
-    Ok(std::env::set_current_dir(path).echo_err()?)
+    Ok(std::env::set_current_dir(path)?)
 }
 
 pub fn set_var(key: impl AsRef<OsStr>, value: impl AsRef<OsStr>) {

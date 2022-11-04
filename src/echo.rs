@@ -91,16 +91,3 @@ macro_rules! echo_err {
 pub fn prefix(tag: &'static str) -> String {
     format!("{} {}", tag.bright_black(), "%".green())
 }
-
-pub trait EchoErrExt {
-    fn echo_err(self) -> Self;
-}
-
-impl<T, E: std::fmt::Display> EchoErrExt for std::result::Result<T, E> {
-    fn echo_err(self) -> Self {
-        if let Err(ref err) = self {
-            echo_err!(err);
-        }
-        self
-    }
-}

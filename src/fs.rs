@@ -13,7 +13,7 @@ pub fn rename(from: impl AsRef<Path>, to: impl AsRef<Path>) -> Result<()> {
         "->",
         to.to_string_lossy().bold().underline(),
     );
-    Ok(std::fs::rename(from, to).echo_err()?)
+    Ok(std::fs::rename(from, to)?)
 }
 
 pub fn copy(from: impl AsRef<Path>, to: impl AsRef<Path>) -> Result<u64> {
@@ -26,7 +26,7 @@ pub fn copy(from: impl AsRef<Path>, to: impl AsRef<Path>) -> Result<u64> {
         "->",
         to.to_string_lossy().bold().underline(),
     );
-    Ok(std::fs::copy(from, to).echo_err()?)
+    Ok(std::fs::copy(from, to)?)
 }
 
 pub fn hard_link(original: impl AsRef<Path>, link: impl AsRef<Path>) -> Result<()> {
@@ -39,7 +39,7 @@ pub fn hard_link(original: impl AsRef<Path>, link: impl AsRef<Path>) -> Result<(
         "->",
         link.to_string_lossy().bold().underline(),
     );
-    Ok(std::fs::hard_link(original, link).echo_err()?)
+    Ok(std::fs::hard_link(original, link)?)
 }
 
 pub fn create_dir(path: impl AsRef<Path>) -> Result<()> {
@@ -49,7 +49,7 @@ pub fn create_dir(path: impl AsRef<Path>) -> Result<()> {
         "create_dir".bold().cyan(),
         path.to_string_lossy().bold().underline(),
     );
-    Ok(std::fs::create_dir(path).echo_err()?)
+    Ok(std::fs::create_dir(path)?)
 }
 
 pub fn create_dir_all(path: impl AsRef<Path>) -> Result<()> {
@@ -59,7 +59,7 @@ pub fn create_dir_all(path: impl AsRef<Path>) -> Result<()> {
         "create_dir_all".bold().cyan(),
         path.to_string_lossy().bold().underline(),
     );
-    Ok(std::fs::create_dir_all(path).echo_err()?)
+    Ok(std::fs::create_dir_all(path)?)
 }
 
 pub fn metadata(path: impl AsRef<Path>) -> Result<std::fs::Metadata> {
@@ -69,7 +69,7 @@ pub fn metadata(path: impl AsRef<Path>) -> Result<std::fs::Metadata> {
         "metadata".bold().cyan(),
         path.to_string_lossy().bold().underline(),
     );
-    Ok(std::fs::metadata(path).echo_err()?)
+    Ok(std::fs::metadata(path)?)
 }
 
 pub fn read_dir(path: impl AsRef<Path>) -> Result<std::fs::ReadDir> {
@@ -79,7 +79,7 @@ pub fn read_dir(path: impl AsRef<Path>) -> Result<std::fs::ReadDir> {
         "read_dir".bold().cyan(),
         path.to_string_lossy().bold().underline(),
     );
-    Ok(std::fs::read_dir(path).echo_err()?)
+    Ok(std::fs::read_dir(path)?)
 }
 
 pub fn read(path: impl AsRef<Path>) -> Result<Vec<u8>> {
@@ -89,7 +89,7 @@ pub fn read(path: impl AsRef<Path>) -> Result<Vec<u8>> {
         "read".bold().cyan(),
         path.to_string_lossy().bold().underline(),
     );
-    Ok(std::fs::read(path).echo_err()?)
+    Ok(std::fs::read(path)?)
 }
 
 pub fn read_to_string(path: impl AsRef<Path>) -> Result<String> {
@@ -99,7 +99,7 @@ pub fn read_to_string(path: impl AsRef<Path>) -> Result<String> {
         "read_to_string".bold().cyan(),
         path.to_string_lossy().bold().underline(),
     );
-    Ok(std::fs::read_to_string(path).echo_err()?)
+    Ok(std::fs::read_to_string(path)?)
 }
 
 pub fn write(path: impl AsRef<Path>, contents: impl AsRef<[u8]>) -> Result<()> {
@@ -112,7 +112,7 @@ pub fn write(path: impl AsRef<Path>, contents: impl AsRef<[u8]>) -> Result<()> {
         "->",
         path.to_string_lossy().bold().underline(),
     );
-    Ok(std::fs::write(path, contents).echo_err()?)
+    Ok(std::fs::write(path, contents)?)
 }
 
 pub fn remove_dir(path: impl AsRef<Path>) -> Result<()> {
@@ -122,7 +122,7 @@ pub fn remove_dir(path: impl AsRef<Path>) -> Result<()> {
         "remove_dir".bold().cyan(),
         path.to_string_lossy().bold().underline(),
     );
-    Ok(std::fs::remove_dir(path).echo_err()?)
+    Ok(std::fs::remove_dir(path)?)
 }
 
 pub fn remove_dir_all(path: impl AsRef<Path>) -> Result<()> {
@@ -132,7 +132,7 @@ pub fn remove_dir_all(path: impl AsRef<Path>) -> Result<()> {
         "remove_dir_all".bold().cyan(),
         path.to_string_lossy().bold().underline(),
     );
-    Ok(std::fs::remove_dir_all(path).echo_err()?)
+    Ok(std::fs::remove_dir_all(path)?)
 }
 
 pub fn remove_file(path: impl AsRef<Path>) -> Result<()> {
@@ -142,5 +142,5 @@ pub fn remove_file(path: impl AsRef<Path>) -> Result<()> {
         "remove_file".bold().cyan(),
         path.to_string_lossy().bold().underline(),
     );
-    Ok(std::fs::remove_file(path).echo_err()?)
+    Ok(std::fs::remove_file(path)?)
 }

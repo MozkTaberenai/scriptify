@@ -37,24 +37,21 @@ fn echo_command_info(command: &Command, echo: &mut Echo) {
     let envs = command.get_envs();
     if envs.len() > 0 {
         for (k, v) in envs {
-            match v {
-                Some(v) => {
-                    echo.put(format!(
-                        "{}{}{}{}",
-                        "env:".bright_black(),
-                        k.to_string_lossy().underline().bright_black(),
-                        "=".bright_black(),
-                        v.to_string_lossy().underline().bright_black(),
-                    ));
-                }
-                None => {
-                    echo.put(format!(
-                        "{}{}{}",
-                        "env:".bright_black(),
-                        "!".bright_black(),
-                        k.to_string_lossy().underline().bright_black(),
-                    ));
-                }
+            if let Some(v) = v {
+                echo.put(format!(
+                    "{}{}{}{}",
+                    "env:".bright_black(),
+                    k.to_string_lossy().underline().bright_black(),
+                    "=".bright_black(),
+                    v.to_string_lossy().underline().bright_black(),
+                ));
+            } else {
+                echo.put(format!(
+                    "{}{}{}",
+                    "env:".bright_black(),
+                    "!".bright_black(),
+                    k.to_string_lossy().underline().bright_black(),
+                ));
             }
         }
     }
@@ -190,7 +187,7 @@ impl<I, O> Cmd<I, O> {
             self.inner.stdout(Stdio::piped());
         }
 
-        let mut child = self.inner.spawn().echo_err()?;
+        let mut child = self.inner.spawn()?;
         let stdin = child.stdin.take();
         let stdout = child.stdout.take();
 
@@ -215,17 +212,17 @@ impl Cmd {
     }
 
     pub fn run(self) -> Result<()> {
-        let status = self.spawn()?.wait().echo_err()?;
-        match status.success() {
-            true => Ok(()),
-            false => {
-                let err = match status.code() {
-                    Some(code) => Error::Exit { code },
-                    None => Error::Terminated,
-                };
-                Err(err).echo_err()?
-            }
+        let status = self.spawn()?.wait()?;
+
+        if !status.success() {
+            let err = match status.code() {
+                Some(code) => Error::Exit { code },
+                None => Error::Terminated,
+            };
+            Err(err)?;
         }
+
+        Ok(())
     }
 
     pub fn output(mut self) -> Result<Output> {
@@ -233,7 +230,7 @@ impl Cmd {
         match self.inner.output() {
             Err(err) => {
                 echo.end();
-                Err(err).echo_err()?
+                Err(err)?
             }
             Ok(output) => {
                 if !output.stdout.is_empty() {
@@ -364,7 +361,7 @@ impl<I, O> Pipeline<I, O> {
             if i < max_i || pipeout {
                 command.stdout(Stdio::piped());
             }
-            let mut child = command.spawn().echo_err()?;
+            let mut child = command.spawn()?;
             if i < max_i {
                 last_stdout = child.stdout.take().map(Stdio::from);
             }
@@ -387,7 +384,8 @@ impl Pipeline {
     }
 
     pub fn run(self) -> Result<()> {
-        let status = self.spawn()?.wait().echo_err()?;
+        let status = self.spawn()?.wait()?;
+
         let mut ok = vec![];
         let mut err = vec![];
         for status in status {
@@ -396,15 +394,16 @@ impl Pipeline {
                 false => err.push(status),
             }
         }
-        if err.is_empty() {
-            Ok(())
-        } else {
+
+        if !err.is_empty() {
             let err = match err[0].code() {
                 Some(code) => Error::Exit { code },
                 None => Error::Terminated,
             };
-            Err(err).echo_err()?
+            Err(err)?;
         }
+
+        Ok(())
     }
 }
 
@@ -437,7 +436,7 @@ impl PipelineChildren {
     pub fn wait(&mut self) -> Result<Vec<ExitStatus>> {
         let mut status = Vec::with_capacity(self.children.len());
         for child in &mut self.children {
-            status.push(child.wait().echo_err()?);
+            status.push(child.wait()?);
         }
         Ok(status)
     }
