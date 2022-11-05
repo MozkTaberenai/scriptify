@@ -75,8 +75,7 @@ pub enum UnknownStdio {}
 pub struct Cmd<I = UnknownStdio, O = UnknownStdio> {
     inner: Command,
     quiet: bool,
-    // _marker: PhantomData<fn() -> (I, O)>,
-    _marker: PhantomData<(I, O)>,
+    _marker: PhantomData<fn() -> (I, O)>,
 }
 
 impl<I, O> Cmd<I, O> {
@@ -279,8 +278,7 @@ impl<I, O> From<Cmd<I, O>> for Command {
 pub struct Pipeline<I = UnknownStdio, O = UnknownStdio> {
     commands: Vec<Command>,
     quiet: bool,
-    // _marker: PhantomData<fn() -> (I, O)>,
-    _marker: PhantomData<(I, O)>,
+    _marker: PhantomData<fn() -> (I, O)>,
 }
 
 impl<I, O> From<Cmd<I, O>> for Pipeline<I, O> {
