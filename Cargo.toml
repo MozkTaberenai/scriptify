@@ -3,7 +3,11 @@ name = "scriptant"
 version = "0.4.1"
 edition = "2021"
 authors = ["Mozk Taberenai <mozk@me.com>"]
+license = "MIT"
 description = "Rust scripting assistant"
+repository = "https://github.com/MozkTaberenai/scriptant"
+homepage = "https://github.com/MozkTaberenai/scriptant"
+categories = ["command-line-interface"]
 
 [dependencies]
 anyhow = "1.0.66"
