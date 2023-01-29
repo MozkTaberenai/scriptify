@@ -47,10 +47,10 @@ impl Echo {
         }
 
         match (self.count, self.stream) {
-            (0, Stdout) => print!("{}", arg),
-            (0, Stderr) => eprint!("{}", arg),
-            (_, Stdout) => print!(" {}", arg),
-            (_, Stderr) => eprint!(" {}", arg),
+            (0, Stdout) => print!("{arg}"),
+            (0, Stderr) => eprint!("{arg}"),
+            (_, Stdout) => print!(" {arg}"),
+            (_, Stderr) => eprint!(" {arg}"),
         }
 
         self.count += 1;

@@ -120,12 +120,12 @@ where
             false => {
                 let mut iter = self.style.code.iter();
                 if let Some(code) = iter.next() {
-                    write!(f, "\x1B[{}", code)?;
+                    write!(f, "\x1B[{code}")?;
                 } else {
                     return write!(f, "{}", self.inner);
                 }
                 for code in iter {
-                    write!(f, ";{}", code)?;
+                    write!(f, ";{code}")?;
                 }
                 write!(f, "m{}{}", self.inner, RESET)
             }
