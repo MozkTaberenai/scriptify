@@ -11,6 +11,7 @@ static ECHO_PREFIX: Lazy<String> = Lazy::new(|| echo::prefix("cmd"));
 pub enum Error {
     Exit { code: i32 },
     Terminated,
+    Io(std::io::Error),
 }
 
 impl std::fmt::Display for Error {
@@ -18,7 +19,14 @@ impl std::fmt::Display for Error {
         match *self {
             Error::Exit { code } => write!(f, "Exit with error status code: {code}"),
             Error::Terminated => write!(f, "Terminated by signal"),
+            Error::Io(ref io_err) => write!(f, "IO Error: {io_err}"),
         }
+    }
+}
+
+impl From<std::io::Error> for Error {
+    fn from(io_err: std::io::Error) -> Self {
+        Self::Io(io_err)
     }
 }
 
@@ -176,7 +184,7 @@ impl<I, O> Cmd<I, O> {
         mut self,
         pipein: bool,
         pipeout: bool,
-    ) -> Result<(Child, Option<ChildStdin>, Option<ChildStdout>)> {
+    ) -> std::io::Result<(Child, Option<ChildStdin>, Option<ChildStdout>)> {
         self._echo(pipein, pipeout).end();
 
         if pipein {
@@ -205,12 +213,12 @@ impl Cmd {
         }
     }
 
-    pub fn spawn(self) -> Result<Child> {
+    pub fn spawn(self) -> std::io::Result<Child> {
         let (child, _, _) = self._spawn(false, false)?;
         Ok(child)
     }
 
-    pub fn run(self) -> Result<()> {
+    pub fn run(self) -> Result<(), Error> {
         let status = self.spawn()?.wait()?;
 
         if !status.success() {
@@ -224,7 +232,7 @@ impl Cmd {
         Ok(())
     }
 
-    pub fn output(mut self) -> Result<Output> {
+    pub fn output(mut self) -> std::io::Result<Output> {
         let mut echo = self._echo(false, true);
         match self.inner.output() {
             Err(err) => {
@@ -250,20 +258,20 @@ impl Cmd {
 }
 
 impl Cmd<ChildStdin, UnknownStdio> {
-    pub fn spawn(self) -> Result<(ChildStdin, Child)> {
+    pub fn spawn(self) -> std::io::Result<(ChildStdin, Child)> {
         let (child, stdin, _) = self._spawn(true, false)?;
         Ok((stdin.unwrap(), child))
     }
 }
 
 impl Cmd<UnknownStdio, ChildStdout> {
-    pub fn spawn(self) -> Result<(ChildStdout, Child)> {
+    pub fn spawn(self) -> std::io::Result<(ChildStdout, Child)> {
         let (child, _, stdout) = self._spawn(false, true)?;
         Ok((stdout.unwrap(), child))
     }
 }
 impl Cmd<ChildStdin, ChildStdout> {
-    pub fn spawn(self) -> Result<(ChildStdin, ChildStdout, Child)> {
+    pub fn spawn(self) -> std::io::Result<(ChildStdin, ChildStdout, Child)> {
         let (child, stdin, stdout) = self._spawn(true, true)?;
         Ok((stdin.unwrap(), stdout.unwrap(), child))
     }
@@ -341,7 +349,7 @@ impl<I, O> Pipeline<I, O> {
         self,
         pipein: bool,
         pipeout: bool,
-    ) -> Result<(PipelineChildren, Option<ChildStdin>, Option<ChildStdout>)> {
+    ) -> std::io::Result<(PipelineChildren, Option<ChildStdin>, Option<ChildStdout>)> {
         self._echo(pipein, pipeout);
         let mut children = Vec::with_capacity(self.commands.len());
 
@@ -376,12 +384,12 @@ impl<I, O> Pipeline<I, O> {
 }
 
 impl Pipeline {
-    pub fn spawn(self) -> Result<PipelineChildren> {
+    pub fn spawn(self) -> std::io::Result<PipelineChildren> {
         let (children, _, _) = self._spawn(false, false)?;
         Ok(children)
     }
 
-    pub fn run(self) -> Result<()> {
+    pub fn run(self) -> Result<(), Error> {
         let status = self.spawn()?.wait()?;
 
         let mut ok = vec![];
@@ -406,21 +414,21 @@ impl Pipeline {
 }
 
 impl Pipeline<ChildStdin, UnknownStdio> {
-    pub fn spawn(self) -> Result<(ChildStdin, PipelineChildren)> {
+    pub fn spawn(self) -> std::io::Result<(ChildStdin, PipelineChildren)> {
         let (children, stdin, _) = self._spawn(true, false)?;
         Ok((stdin.unwrap(), children))
     }
 }
 
 impl Pipeline<UnknownStdio, ChildStdout> {
-    pub fn spawn(self) -> Result<(ChildStdout, PipelineChildren)> {
+    pub fn spawn(self) -> std::io::Result<(ChildStdout, PipelineChildren)> {
         let (children, _, stdout) = self._spawn(false, true)?;
         Ok((stdout.unwrap(), children))
     }
 }
 
 impl Pipeline<ChildStdin, ChildStdout> {
-    pub fn spawn(self) -> Result<(ChildStdin, ChildStdout, PipelineChildren)> {
+    pub fn spawn(self) -> std::io::Result<(ChildStdin, ChildStdout, PipelineChildren)> {
         let (children, stdin, stdout) = self._spawn(true, true)?;
         Ok((stdin.unwrap(), stdout.unwrap(), children))
     }
@@ -431,7 +439,7 @@ pub struct PipelineChildren {
 }
 
 impl PipelineChildren {
-    pub fn wait(&mut self) -> Result<Vec<ExitStatus>> {
+    pub fn wait(&mut self) -> std::io::Result<Vec<ExitStatus>> {
         let mut status = Vec::with_capacity(self.children.len());
         for child in &mut self.children {
             status.push(child.wait()?);

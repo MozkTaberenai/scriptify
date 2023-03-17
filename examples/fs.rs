@@ -1,6 +1,6 @@
 use scriptant::*;
 
-fn main() -> Result<()> {
+fn main() -> Result<(), AnyError> {
     fs::create_dir("tmp")?;
 
     fs::write("tmp/a.txt", "abc")?;
@@ -31,7 +31,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn file_info(path: impl AsRef<Path>) -> Result<()> {
+fn file_info(path: impl AsRef<Path>) -> std::io::Result<()> {
     let path = path.as_ref();
     let metadata = fs::metadata(path)?;
     echo!("=>".magenta(), format!("{} bytes", metadata.len()));

@@ -3,7 +3,7 @@ pub use std::io::{BufRead, BufReader, BufWriter, Read, Write};
 pub use std::path::{Path, PathBuf};
 pub use std::process::Stdio;
 
-pub use anyhow::{self, bail, ensure, Result};
+pub type AnyError = Box<dyn std::error::Error>;
 
 mod ansi;
 pub use ansi::{style, AnsiStyle, AnsiStyleExt, AnsiStyled};
