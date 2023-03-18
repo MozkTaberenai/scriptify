@@ -7,30 +7,15 @@ use std::process::{ChildStdin, ChildStdout};
 use once_cell::sync::Lazy;
 static ECHO_PREFIX: Lazy<String> = Lazy::new(|| echo::prefix("cmd"));
 
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum Error {
-    Exit { code: i32 },
-    Terminated,
-    Io(std::io::Error),
+    #[error("exit with error status code: {code}")]
+    CommandExit { code: i32 },
+    #[error("terminated by signal")]
+    CommandTerminated,
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
 }
-
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match *self {
-            Error::Exit { code } => write!(f, "Exit with error status code: {code}"),
-            Error::Terminated => write!(f, "Terminated by signal"),
-            Error::Io(ref io_err) => write!(f, "IO Error: {io_err}"),
-        }
-    }
-}
-
-impl From<std::io::Error> for Error {
-    fn from(io_err: std::io::Error) -> Self {
-        Self::Io(io_err)
-    }
-}
-
-impl std::error::Error for Error {}
 
 fn echo_command_info(command: &Command, echo: &mut Echo) {
     if let Some(current_dir) = command.get_current_dir() {
@@ -223,8 +208,8 @@ impl Cmd {
 
         if !status.success() {
             let err = match status.code() {
-                Some(code) => Error::Exit { code },
-                None => Error::Terminated,
+                Some(code) => Error::CommandExit { code },
+                None => Error::CommandTerminated,
             };
             Err(err)?;
         }
@@ -403,8 +388,8 @@ impl Pipeline {
 
         if !err.is_empty() {
             let err = match err[0].code() {
-                Some(code) => Error::Exit { code },
-                None => Error::Terminated,
+                Some(code) => Error::CommandExit { code },
+                None => Error::CommandTerminated,
             };
             Err(err)?;
         }
