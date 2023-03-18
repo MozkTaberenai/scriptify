@@ -4,8 +4,7 @@ use std::marker::PhantomData;
 use std::process::{Child, Command, ExitStatus, Output, Stdio};
 use std::process::{ChildStdin, ChildStdout};
 
-use once_cell::sync::Lazy;
-static ECHO_PREFIX: Lazy<String> = Lazy::new(|| echo::prefix("cmd"));
+const TAG: &str = "cmd";
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -17,7 +16,7 @@ pub enum Error {
     Io(#[from] std::io::Error),
 }
 
-fn echo_command_info(command: &Command, echo: &mut Echo) {
+fn echo_command_info(command: &Command, echo: &mut EchoContext) {
     if let Some(current_dir) = command.get_current_dir() {
         let current_dir = format!(
             "{}{}",
@@ -149,12 +148,11 @@ impl<I, O> Cmd<I, O> {
         self
     }
 
-    fn _echo(&self, pipein: bool, pipeout: bool) -> Echo {
-        let mut echo = Echo::new();
+    fn _echo(&self, pipein: bool, pipeout: bool) -> EchoContext {
+        let mut echo = EchoContext::new(TAG);
         if self.quiet {
             echo.quiet();
         }
-        echo.put(&*ECHO_PREFIX);
         if pipein {
             echo.put("->|".magenta());
         }
@@ -307,11 +305,10 @@ impl<I, O> Pipeline<I, O> {
     }
 
     fn _echo(&self, pipein: bool, pipeout: bool) {
-        let mut echo = Echo::new();
+        let mut echo = EchoContext::new(TAG);
         if self.quiet {
             echo.quiet();
         }
-        echo.put(&*ECHO_PREFIX);
 
         let mut iter = self.commands.iter();
         let first = iter.next().unwrap();

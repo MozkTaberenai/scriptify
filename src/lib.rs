@@ -9,8 +9,8 @@ mod ansi;
 pub use ansi::{style, AnsiStyle, AnsiStyleExt, AnsiStyled};
 
 #[macro_use]
-mod echo;
-pub use echo::Echo;
+pub mod echo;
+pub use echo::EchoContext;
 
 #[macro_use]
 mod cmd;
@@ -20,7 +20,7 @@ pub mod fs;
 
 pub fn exit(code: i32) -> ! {
     if code != 0 {
-        echo_err!("Exit with code:", code);
+        echo!("exit", "Exit with code:".yellow(), code.yellow());
     }
     std::process::exit(code);
 }

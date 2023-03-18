@@ -19,7 +19,11 @@ fn main() -> Result<(), AnyError> {
 
     for entry in fs::read_dir("tmp")? {
         let entry = entry?;
-        echo!("=>".magenta(), entry.file_name().to_string_lossy());
+        echo!(
+            "file_name",
+            "=>".magenta(),
+            entry.file_name().to_string_lossy()
+        );
     }
 
     fs::remove_file("tmp/b.txt")?;
@@ -34,6 +38,10 @@ fn main() -> Result<(), AnyError> {
 fn file_info(path: impl AsRef<Path>) -> std::io::Result<()> {
     let path = path.as_ref();
     let metadata = fs::metadata(path)?;
-    echo!("=>".magenta(), format!("{} bytes", metadata.len()));
+    echo!(
+        "file_info",
+        "=>".magenta(),
+        format!("{} bytes", metadata.len())
+    );
     Ok(())
 }

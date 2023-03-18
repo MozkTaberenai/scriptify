@@ -1,9 +1,9 @@
 use crate::AnsiStyleExt;
 
-pub struct Echo {
+pub struct EchoContext {
     stream: Stream,
     disabled: bool,
-    count: usize,
+    tag: Option<&'static str>,
 }
 
 #[derive(Clone, Copy)]
@@ -14,8 +14,8 @@ enum Stream {
 
 use Stream::*;
 
-impl Default for Echo {
-    fn default() -> Self {
+impl EchoContext {
+    pub fn new(tag: &'static str) -> Self {
         let stream = match std::env::var_os("ECHO_STDERR").is_some() {
             true => Stderr,
             false => Stdout,
@@ -23,17 +23,13 @@ impl Default for Echo {
 
         let disabled = std::env::var_os("NO_ECHO").is_some();
 
+        let tag = Some(tag);
+
         Self {
             stream,
             disabled,
-            count: 0,
+            tag,
         }
-    }
-}
-
-impl Echo {
-    pub fn new() -> Self {
-        Self::default()
     }
 
     pub fn quiet(&mut self) -> &mut Self {
@@ -46,14 +42,18 @@ impl Echo {
             return self;
         }
 
-        match (self.count, self.stream) {
-            (0, Stdout) => print!("{arg}"),
-            (0, Stderr) => eprint!("{arg}"),
-            (_, Stdout) => print!(" {arg}"),
-            (_, Stderr) => eprint!(" {arg}"),
+        if let Some(tag) = self.tag.take() {
+            let tag = format!("{} {}", tag.bright_black(), "%".green());
+            match self.stream {
+                Stdout => print!("{tag}"),
+                Stderr => eprint!("{tag}"),
+            }
         }
 
-        self.count += 1;
+        match self.stream {
+            Stdout => print!(" {arg}"),
+            Stderr => eprint!(" {arg}"),
+        }
 
         self
     }
@@ -72,22 +72,9 @@ impl Echo {
 
 #[macro_export]
 macro_rules! echo {
-    ($($arg:expr),* $(,)?) => {{
-        let mut echo = Echo::new();
+    ($tag:expr, $($arg:expr),* $(,)?) => {{
+        let mut echo = EchoContext::new($tag);
         $(echo.put($arg);)*
         echo.end();
     }};
-}
-
-#[macro_export]
-macro_rules! echo_err {
-    ($($arg:expr),* $(,)?) => {{
-        let mut echo = Echo::new();
-        $(echo.put($arg.yellow());)*
-        echo.end();
-    }};
-}
-
-pub fn prefix(tag: &'static str) -> String {
-    format!("{} {}", tag.bright_black(), "%".green())
 }

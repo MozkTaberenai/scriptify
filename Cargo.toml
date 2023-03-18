@@ -1,6 +1,6 @@
 [package]
 name = "scriptant"
-version = "0.5.1"
+version = "0.6.0"
 edition = "2021"
 authors = ["Mozk Taberenai <mozk@me.com>"]
 license = "MIT"
@@ -10,7 +10,6 @@ homepage = "https://github.com/MozkTaberenai/scriptant"
 categories = ["command-line-interface"]
 
 [dependencies]
-once_cell = "1.17.1"
 smallvec = "1.10.0"
 thiserror = "1.0"
 
@@ -20,3 +19,5 @@ name = "cmd"
 name = "env"
 [[example]]
 name = "fs"
+[[example]]
+name = "echo"
