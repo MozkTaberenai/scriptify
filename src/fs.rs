@@ -1,6 +1,6 @@
 use super::*;
 
-const ECHO_PREFIX: &str = " fs";
+const ECHO_PREFIX: &str = "fs";
 
 pub fn rename(from: impl AsRef<Path>, to: impl AsRef<Path>) -> std::io::Result<()> {
     let from = from.as_ref();
