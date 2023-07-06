@@ -54,18 +54,18 @@ macro_rules! echo {
 
 #[macro_export]
 macro_rules! err {
-    ($($arg:expr),* $(,)?) => {{
+    ($($arg:expr),* $(,)?) => {
         let mut echo = Echo::new();
         $(echo.put($arg.red());)*
         echo.end();
-    }};
+    };
 }
 
 #[macro_export]
 macro_rules! wrn {
-    ($($arg:expr),* $(,)?) => {{
+    ($($arg:expr),* $(,)?) => {
         let mut echo = Echo::new();
         $(echo.put($arg.yellow());)*
         echo.end();
-    }};
+    };
 }
