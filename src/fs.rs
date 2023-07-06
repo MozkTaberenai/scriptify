@@ -1,12 +1,18 @@
 use super::*;
 
-const ECHO_PREFIX: &str = "fs";
+macro_rules! echo {
+    ($($arg:expr),* $(,)?) => {
+        $crate::echo!(
+            "fs".bright_black(),
+            $($arg,)*
+        );
+    };
+}
 
 pub fn rename(from: impl AsRef<Path>, to: impl AsRef<Path>) -> std::io::Result<()> {
     let from = from.as_ref();
     let to = to.as_ref();
     echo!(
-        ECHO_PREFIX,
         "rename".bold().cyan(),
         from.to_string_lossy().bold().underline(),
         "->",
@@ -19,7 +25,6 @@ pub fn copy(from: impl AsRef<Path>, to: impl AsRef<Path>) -> std::io::Result<u64
     let from = from.as_ref();
     let to = to.as_ref();
     echo!(
-        ECHO_PREFIX,
         "copy".bold().cyan(),
         from.to_string_lossy().bold().underline(),
         "->",
@@ -32,7 +37,6 @@ pub fn hard_link(original: impl AsRef<Path>, link: impl AsRef<Path>) -> std::io:
     let original = original.as_ref();
     let link = link.as_ref();
     echo!(
-        ECHO_PREFIX,
         "hard_link".bold().cyan(),
         original.to_string_lossy().bold().underline(),
         "->",
@@ -44,7 +48,6 @@ pub fn hard_link(original: impl AsRef<Path>, link: impl AsRef<Path>) -> std::io:
 pub fn create_dir(path: impl AsRef<Path>) -> std::io::Result<()> {
     let path = path.as_ref();
     echo!(
-        ECHO_PREFIX,
         "create_dir".bold().cyan(),
         path.to_string_lossy().bold().underline(),
     );
@@ -54,7 +57,6 @@ pub fn create_dir(path: impl AsRef<Path>) -> std::io::Result<()> {
 pub fn create_dir_all(path: impl AsRef<Path>) -> std::io::Result<()> {
     let path = path.as_ref();
     echo!(
-        ECHO_PREFIX,
         "create_dir_all".bold().cyan(),
         path.to_string_lossy().bold().underline(),
     );
@@ -64,7 +66,6 @@ pub fn create_dir_all(path: impl AsRef<Path>) -> std::io::Result<()> {
 pub fn metadata(path: impl AsRef<Path>) -> std::io::Result<std::fs::Metadata> {
     let path = path.as_ref();
     echo!(
-        ECHO_PREFIX,
         "metadata".bold().cyan(),
         path.to_string_lossy().bold().underline(),
     );
@@ -74,7 +75,6 @@ pub fn metadata(path: impl AsRef<Path>) -> std::io::Result<std::fs::Metadata> {
 pub fn read_dir(path: impl AsRef<Path>) -> std::io::Result<std::fs::ReadDir> {
     let path = path.as_ref();
     echo!(
-        ECHO_PREFIX,
         "read_dir".bold().cyan(),
         path.to_string_lossy().bold().underline(),
     );
@@ -84,7 +84,6 @@ pub fn read_dir(path: impl AsRef<Path>) -> std::io::Result<std::fs::ReadDir> {
 pub fn read(path: impl AsRef<Path>) -> std::io::Result<Vec<u8>> {
     let path = path.as_ref();
     echo!(
-        ECHO_PREFIX,
         "read".bold().cyan(),
         path.to_string_lossy().bold().underline(),
     );
@@ -94,7 +93,6 @@ pub fn read(path: impl AsRef<Path>) -> std::io::Result<Vec<u8>> {
 pub fn read_to_string(path: impl AsRef<Path>) -> std::io::Result<String> {
     let path = path.as_ref();
     echo!(
-        ECHO_PREFIX,
         "read_to_string".bold().cyan(),
         path.to_string_lossy().bold().underline(),
     );
@@ -105,7 +103,6 @@ pub fn write(path: impl AsRef<Path>, contents: impl AsRef<[u8]>) -> std::io::Res
     let path = path.as_ref();
     let contents = contents.as_ref();
     echo!(
-        ECHO_PREFIX,
         "write".bold().cyan(),
         format!("{} bytes", contents.len()),
         "->",
@@ -117,7 +114,6 @@ pub fn write(path: impl AsRef<Path>, contents: impl AsRef<[u8]>) -> std::io::Res
 pub fn remove_dir(path: impl AsRef<Path>) -> std::io::Result<()> {
     let path = path.as_ref();
     echo!(
-        ECHO_PREFIX,
         "remove_dir".bold().cyan(),
         path.to_string_lossy().bold().underline(),
     );
@@ -127,7 +123,6 @@ pub fn remove_dir(path: impl AsRef<Path>) -> std::io::Result<()> {
 pub fn remove_dir_all(path: impl AsRef<Path>) -> std::io::Result<()> {
     let path = path.as_ref();
     echo!(
-        ECHO_PREFIX,
         "remove_dir_all".bold().cyan(),
         path.to_string_lossy().bold().underline(),
     );
@@ -137,7 +132,6 @@ pub fn remove_dir_all(path: impl AsRef<Path>) -> std::io::Result<()> {
 pub fn remove_file(path: impl AsRef<Path>) -> std::io::Result<()> {
     let path = path.as_ref();
     echo!(
-        ECHO_PREFIX,
         "remove_file".bold().cyan(),
         path.to_string_lossy().bold().underline(),
     );

@@ -1,6 +1,6 @@
 [package]
 name = "scriptant"
-version = "0.6.1"
+version = "0.7.0"
 edition = "2021"
 authors = ["Mozk Taberenai <mozk@me.com>"]
 license = "MIT"
@@ -10,8 +10,8 @@ homepage = "https://github.com/MozkTaberenai/scriptant"
 categories = ["command-line-interface"]
 
 [dependencies]
-smallvec = "1.10.0"
-thiserror = "1.0"
+error-stack = "0.3.1"
+smallvec = "1.11.0"
 
 [[example]]
 name = "cmd"

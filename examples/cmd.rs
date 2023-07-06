@@ -11,7 +11,7 @@ fn main() -> Result<(), AnyError> {
     let (mut stdout, mut child) = cmd!("echo", "-n", "abcde").pipeout().spawn()?;
     let mut out = String::new();
     stdout.read_to_string(&mut out)?;
-    echo!("string", out);
+    echo!("pipe output:".blue(), out);
     child.wait()?; // this can be omitted
 
     let (mut stdin, mut child) = cmd!("tr", "[:lower:]", "[:upper:]").pipein().spawn()?;
@@ -23,15 +23,15 @@ fn main() -> Result<(), AnyError> {
     cmd!("ls", "-alF").current_dir("src").run()?;
 
     if let Err(err) = cmd!("unknown_command", "and", "run").run() {
-        echo!("err", err.red());
+        println!("{err:?}");
     }
 
     if let Err(err) = cmd!("unknown_command", "and", "output").output() {
-        echo!("err", err.red());
+        println!("{err:?}");
     }
 
     if let Err(err) = cmd!("sh", "-c", "echo from sh; exit 1").run() {
-        echo!("err", err.red());
+        println!("{err:?}");
     }
 
     cmd!("date")
@@ -39,11 +39,13 @@ fn main() -> Result<(), AnyError> {
         .pipe(cmd!("tr", "[:upper:]", "[:lower:]"))
         .run()?;
 
+    let pipe_input = "abcde";
+    echo!("pipe input:".blue(), pipe_input);
     let (mut stdin, mut children) = cmd!("rev")
         .pipe(cmd!("tr", "[:lower:]", "[:upper:]"))
         .pipein()
         .spawn()?;
-    std::thread::spawn(move || writeln!(stdin, "abcde").unwrap());
+    std::thread::spawn(move || writeln!(stdin, "{pipe_input}").unwrap());
     children.wait()?;
 
     let (mut stdout, mut children) = cmd!("date", "-uR")
@@ -52,7 +54,7 @@ fn main() -> Result<(), AnyError> {
         .spawn()?;
     let mut out = String::new();
     stdout.read_to_string(&mut out)?;
-    echo!("string", out.trim());
+    echo!("pipe output:".blue(), out.trim());
     children.wait()?;
 
     Ok(())

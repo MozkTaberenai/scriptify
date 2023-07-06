@@ -1,22 +1,38 @@
 use super::*;
-
 use std::marker::PhantomData;
 use std::process::{Child, Command, ExitStatus, Output, Stdio};
 use std::process::{ChildStdin, ChildStdout};
 
-const TAG: &str = "cmd";
+pub type Result<T> = std::result::Result<T, Report<CmdError>>;
 
-#[derive(Debug, thiserror::Error)]
-pub enum Error {
-    #[error("exit with error status code: {code}")]
-    CommandExit { code: i32 },
-    #[error("terminated by signal")]
-    CommandTerminated,
-    #[error(transparent)]
-    Io(#[from] std::io::Error),
+use error_stack::{IntoReport, Report, ResultExt};
+
+#[derive(Debug)]
+pub enum CmdError {
+    Exit(i32),
+    Terminated,
+    Io,
 }
 
-fn echo_command_info(command: &Command, echo: &mut EchoContext) {
+impl std::fmt::Display for CmdError {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CmdError::Exit(code) => {
+                fmt.write_fmt(format_args!("exit with error status code: {code}"))
+            }
+            CmdError::Terminated => fmt.write_str("terminated by signal"),
+            CmdError::Io => Ok(()),
+        }
+    }
+}
+
+impl std::error::Error for CmdError {}
+
+fn echo_prefix(echo: &mut Echo) {
+    echo.put("cmd".bright_black());
+}
+
+fn echo_command_info(command: &Command, echo: &mut Echo) {
     if let Some(current_dir) = command.get_current_dir() {
         let current_dir = format!(
             "{}{}",
@@ -148,18 +164,25 @@ impl<I, O> Cmd<I, O> {
         self
     }
 
-    fn _echo(&self, pipein: bool, pipeout: bool) -> EchoContext {
-        let mut echo = EchoContext::new(TAG);
+    fn _echo(&self, pipein: bool, pipeout: bool) -> Echo {
+        let mut echo = Echo::new();
+
         if self.quiet {
             echo.quiet();
         }
+
+        echo_prefix(&mut echo);
+
         if pipein {
             echo.put("->|".magenta());
         }
+
         echo_command_info(&self.inner, &mut echo);
+
         if pipeout {
             echo.put("|->".magenta());
         }
+
         echo
     }
 
@@ -167,7 +190,7 @@ impl<I, O> Cmd<I, O> {
         mut self,
         pipein: bool,
         pipeout: bool,
-    ) -> std::io::Result<(Child, Option<ChildStdin>, Option<ChildStdout>)> {
+    ) -> Result<(Child, Option<ChildStdin>, Option<ChildStdout>)> {
         self._echo(pipein, pipeout).end();
 
         if pipein {
@@ -177,7 +200,11 @@ impl<I, O> Cmd<I, O> {
             self.inner.stdout(Stdio::piped());
         }
 
-        let mut child = self.inner.spawn()?;
+        let mut child = self
+            .inner
+            .spawn()
+            .into_report()
+            .change_context(CmdError::Io)?;
         let stdin = child.stdin.take();
         let stdout = child.stdout.take();
 
@@ -196,31 +223,35 @@ impl Cmd {
         }
     }
 
-    pub fn spawn(self) -> std::io::Result<Child> {
+    pub fn spawn(self) -> Result<Child> {
         let (child, _, _) = self._spawn(false, false)?;
         Ok(child)
     }
 
-    pub fn run(self) -> Result<(), Error> {
-        let status = self.spawn()?.wait()?;
+    pub fn run(self) -> Result<()> {
+        let status = self
+            .spawn()?
+            .wait()
+            .into_report()
+            .change_context(CmdError::Io)?;
 
         if !status.success() {
-            let err = match status.code() {
-                Some(code) => Error::CommandExit { code },
-                None => Error::CommandTerminated,
-            };
-            Err(err)?;
+            match status.code() {
+                Some(code) => return Err(Report::new(CmdError::Exit(code))),
+
+                None => return Err(Report::new(CmdError::Terminated)),
+            }
         }
 
         Ok(())
     }
 
-    pub fn output(mut self) -> std::io::Result<Output> {
+    pub fn output(mut self) -> Result<Output> {
         let mut echo = self._echo(false, true);
         match self.inner.output() {
             Err(err) => {
                 echo.end();
-                Err(err)?
+                Err(err).into_report().change_context(CmdError::Io)
             }
             Ok(output) => {
                 if !output.stdout.is_empty() {
@@ -241,20 +272,20 @@ impl Cmd {
 }
 
 impl Cmd<ChildStdin, UnknownStdio> {
-    pub fn spawn(self) -> std::io::Result<(ChildStdin, Child)> {
+    pub fn spawn(self) -> Result<(ChildStdin, Child)> {
         let (child, stdin, _) = self._spawn(true, false)?;
         Ok((stdin.unwrap(), child))
     }
 }
 
 impl Cmd<UnknownStdio, ChildStdout> {
-    pub fn spawn(self) -> std::io::Result<(ChildStdout, Child)> {
+    pub fn spawn(self) -> Result<(ChildStdout, Child)> {
         let (child, _, stdout) = self._spawn(false, true)?;
         Ok((stdout.unwrap(), child))
     }
 }
 impl Cmd<ChildStdin, ChildStdout> {
-    pub fn spawn(self) -> std::io::Result<(ChildStdin, ChildStdout, Child)> {
+    pub fn spawn(self) -> Result<(ChildStdin, ChildStdout, Child)> {
         let (child, stdin, stdout) = self._spawn(true, true)?;
         Ok((stdin.unwrap(), stdout.unwrap(), child))
     }
@@ -305,21 +336,27 @@ impl<I, O> Pipeline<I, O> {
     }
 
     fn _echo(&self, pipein: bool, pipeout: bool) {
-        let mut echo = EchoContext::new(TAG);
+        let mut echo = Echo::new();
+
         if self.quiet {
             echo.quiet();
         }
+
+        echo_prefix(&mut echo);
 
         let mut iter = self.commands.iter();
         let first = iter.next().unwrap();
         if pipein {
             echo.put("->|".magenta());
         }
+
         echo_command_info(first, &mut echo);
+
         for command in iter {
             echo.put("|".magenta());
             echo_command_info(command, &mut echo);
         }
+
         if pipeout {
             echo.put("|->".magenta());
         }
@@ -331,7 +368,7 @@ impl<I, O> Pipeline<I, O> {
         self,
         pipein: bool,
         pipeout: bool,
-    ) -> std::io::Result<(PipelineChildren, Option<ChildStdin>, Option<ChildStdout>)> {
+    ) -> Result<(PipelineChildren, Option<ChildStdin>, Option<ChildStdout>)> {
         self._echo(pipein, pipeout);
         let mut children = Vec::with_capacity(self.commands.len());
 
@@ -349,7 +386,7 @@ impl<I, O> Pipeline<I, O> {
             if i < max_i || pipeout {
                 command.stdout(Stdio::piped());
             }
-            let mut child = command.spawn()?;
+            let mut child = command.spawn().into_report().change_context(CmdError::Io)?;
             if i < max_i {
                 last_stdout = child.stdout.take().map(Stdio::from);
             }
@@ -366,12 +403,12 @@ impl<I, O> Pipeline<I, O> {
 }
 
 impl Pipeline {
-    pub fn spawn(self) -> std::io::Result<PipelineChildren> {
+    pub fn spawn(self) -> Result<PipelineChildren> {
         let (children, _, _) = self._spawn(false, false)?;
         Ok(children)
     }
 
-    pub fn run(self) -> Result<(), Error> {
+    pub fn run(self) -> Result<()> {
         let status = self.spawn()?.wait()?;
 
         let mut ok = vec![];
@@ -384,11 +421,11 @@ impl Pipeline {
         }
 
         if !err.is_empty() {
-            let err = match err[0].code() {
-                Some(code) => Error::CommandExit { code },
-                None => Error::CommandTerminated,
-            };
-            Err(err)?;
+            match err[0].code() {
+                Some(code) => return Err(Report::new(CmdError::Exit(code))),
+
+                None => return Err(Report::new(CmdError::Terminated)),
+            }
         }
 
         Ok(())
@@ -396,21 +433,21 @@ impl Pipeline {
 }
 
 impl Pipeline<ChildStdin, UnknownStdio> {
-    pub fn spawn(self) -> std::io::Result<(ChildStdin, PipelineChildren)> {
+    pub fn spawn(self) -> Result<(ChildStdin, PipelineChildren)> {
         let (children, stdin, _) = self._spawn(true, false)?;
         Ok((stdin.unwrap(), children))
     }
 }
 
 impl Pipeline<UnknownStdio, ChildStdout> {
-    pub fn spawn(self) -> std::io::Result<(ChildStdout, PipelineChildren)> {
+    pub fn spawn(self) -> Result<(ChildStdout, PipelineChildren)> {
         let (children, _, stdout) = self._spawn(false, true)?;
         Ok((stdout.unwrap(), children))
     }
 }
 
 impl Pipeline<ChildStdin, ChildStdout> {
-    pub fn spawn(self) -> std::io::Result<(ChildStdin, ChildStdout, PipelineChildren)> {
+    pub fn spawn(self) -> Result<(ChildStdin, ChildStdout, PipelineChildren)> {
         let (children, stdin, stdout) = self._spawn(true, true)?;
         Ok((stdin.unwrap(), stdout.unwrap(), children))
     }
@@ -421,10 +458,10 @@ pub struct PipelineChildren {
 }
 
 impl PipelineChildren {
-    pub fn wait(&mut self) -> std::io::Result<Vec<ExitStatus>> {
+    pub fn wait(&mut self) -> Result<Vec<ExitStatus>> {
         let mut status = Vec::with_capacity(self.children.len());
         for child in &mut self.children {
-            status.push(child.wait()?);
+            status.push(child.wait().into_report().change_context(CmdError::Io)?);
         }
         Ok(status)
     }

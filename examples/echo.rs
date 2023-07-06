@@ -1,8 +1,11 @@
 use scriptant::*;
 
 fn main() -> Result<(), AnyError> {
-    echo!("tag", "a", "b", "c");
-    echo!("ttt", "this is yellow".yellow());
-    echo!("xxx", "red bold".red().bold());
+    echo!("a", "b", "c");
+    echo!();
+    echo!("color", "red".red(), "green".green());
+    echo!("red bold".red().bold());
+    err!("this", "is", "error!!");
+    wrn!("this", "is", "warnning!");
     Ok(())
 }

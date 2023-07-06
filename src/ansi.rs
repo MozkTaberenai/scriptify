@@ -78,10 +78,6 @@ impl AnsiStyle {
     apply_macro!(impl_style_method);
 }
 
-pub fn style() -> AnsiStyle {
-    AnsiStyle::new()
-}
-
 #[derive(Debug)]
 pub struct AnsiStyled<T> {
     inner: T,
