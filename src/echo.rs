@@ -1,16 +1,14 @@
-// use crate::AnsiStyleExt;
-use std::borrow::Cow;
-
 pub enum Echo {
     Null,
-    Stdout(Option<Cow<'static, str>>),
+    Head,
+    Tail,
 }
 
 impl Default for Echo {
     fn default() -> Self {
         match std::env::var_os("NO_ECHO").is_some() {
             true => Self::Null,
-            false => Self::Stdout(None),
+            false => Self::Head,
         }
     }
 }
@@ -28,13 +26,11 @@ impl Echo {
     pub fn put(&mut self, arg: impl std::fmt::Display) -> &mut Self {
         match self {
             Self::Null => {}
-            Self::Stdout(p) => {
-                if let Some(p) = p.take() {
-                    print!("{p}");
-                }
+            Self::Head => {
                 print!("{arg}");
-                p.replace(" ".into());
+                *self = Self::Tail;
             }
+            Self::Tail => print!(" {arg}"),
         }
         self
     }
@@ -42,7 +38,7 @@ impl Echo {
     pub fn end(self) {
         match self {
             Self::Null => {}
-            Self::Stdout(_) => println!(),
+            _ => println!(),
         }
     }
 }
