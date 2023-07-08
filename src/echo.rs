@@ -42,30 +42,3 @@ impl Echo {
         }
     }
 }
-
-#[macro_export]
-macro_rules! echo {
-    ($($arg:expr),* $(,)?) => {{
-        let mut echo = Echo::new();
-        $(echo.put($arg);)*
-        echo.end();
-    }};
-}
-
-#[macro_export]
-macro_rules! err {
-    ($($arg:expr),* $(,)?) => {
-        let mut echo = Echo::new();
-        $(echo.put($arg.red());)*
-        echo.end();
-    };
-}
-
-#[macro_export]
-macro_rules! wrn {
-    ($($arg:expr),* $(,)?) => {
-        let mut echo = Echo::new();
-        $(echo.put($arg.yellow());)*
-        echo.end();
-    };
-}

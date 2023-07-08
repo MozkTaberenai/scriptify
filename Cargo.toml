@@ -1,6 +1,6 @@
 [package]
 name = "scriptant"
-version = "0.7.1"
+version = "0.8.0"
 edition = "2021"
 authors = ["Mozk Taberenai <mozk@me.com>"]
 license = "MIT"
@@ -11,6 +11,7 @@ categories = ["command-line-interface"]
 
 [dependencies]
 error-stack = "0.3.1"
+smallvec = "1.11.0"
 
 [[example]]
 name = "cmd"
@@ -19,4 +20,4 @@ name = "env"
 [[example]]
 name = "fs"
 [[example]]
-name = "echo"
+name = "ansi"

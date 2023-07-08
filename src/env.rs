@@ -2,10 +2,10 @@ use super::*;
 
 macro_rules! echo {
     ($($arg:expr),* $(,)?) => {
-        $crate::echo!(
-            "env".bright_black(),
-            $($arg,)*
-        );
+        let mut echo = Echo::new();
+        echo.put("env".bright_black());
+        $(echo.put($arg);)*
+        echo.end();
     };
 }
 

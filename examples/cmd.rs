@@ -11,7 +11,7 @@ fn main() -> Result<(), AnyError> {
     let (mut stdout, mut child) = cmd!("echo", "-n", "abcde").pipeout().spawn()?;
     let mut out = String::new();
     stdout.read_to_string(&mut out)?;
-    echo!("pipe output:".blue(), out);
+    println!("{} {}", "pipe output:".blue(), out);
     child.wait()?; // this can be omitted
 
     let (mut stdin, mut child) = cmd!("tr", "[:lower:]", "[:upper:]").pipein().spawn()?;
@@ -40,7 +40,7 @@ fn main() -> Result<(), AnyError> {
         .run()?;
 
     let pipe_input = "abcde";
-    echo!("pipe input:".blue(), pipe_input);
+    println!("{} {}", "pipe input:".blue(), pipe_input);
     let (mut stdin, mut children) = cmd!("rev")
         .pipe(cmd!("tr", "[:lower:]", "[:upper:]"))
         .pipein()
@@ -54,7 +54,7 @@ fn main() -> Result<(), AnyError> {
         .spawn()?;
     let mut out = String::new();
     stdout.read_to_string(&mut out)?;
-    echo!("pipe output:".blue(), out.trim());
+    println!("{} {}", "pipe output:".blue(), out.trim());
     children.wait()?;
 
     Ok(())

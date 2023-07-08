@@ -1,209 +1,276 @@
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-#[repr(u8)]
-enum Color {
-    #[default]
-    None = 0,
-    Black = 30,
-    Red = 31,
-    Green = 32,
-    Yellow = 33,
-    Blue = 34,
-    Magenta = 35,
-    Cyan = 36,
-    White = 37,
-    BrightBlack = 90,
-    BrightRed = 91,
-    BrightGreen = 92,
-    BrightYellow = 93,
-    BrightBlue = 94,
-    BrightMagenta = 95,
-    BrightCyan = 96,
-    BrightWhite = 97,
+use smallvec::SmallVec;
+
+const CSI: &str = "\x1B[";
+
+#[derive(Debug)]
+pub enum Control {
+    CursorUp(u16),      // xA
+    CursorDown(u16),    // xB
+    CursorForward(u16), // xC
+    CursorBack(u16),    // xD
+
+    CursorNextLine(u16),     // xE
+    CursorPreviousLine(u16), // xF
+
+    CursorMoveInLine(u16), // xG
+    CursorMove(u16, u16),  // x;yH
+
+    EraseForward, // 0J
+    EraseBack,    // 1J
+    EraseDisplay, // 2J
+    EraseAll,     // 3J
+
+    EraseForwardInLine, // 0K
+    EraseBackInLine,    // 1K
+    EraseLine,          // 2K
+
+    SaveCursor,    // s
+    RestoreCursor, // u
+
+    ShowCursor, // ?25h
+    HideCursor, // ?25l
 }
 
-impl Color {
-    fn fg_code(&self) -> u8 {
-        *self as u8
-    }
-    fn bg_code(&self) -> u8 {
-        *self as u8 + 10
+impl std::fmt::Display for Control {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Control::CursorUp(n) => write!(f, "{CSI}{n}A"),
+            Control::CursorDown(n) => write!(f, "{CSI}{n}B"),
+            Control::CursorForward(n) => write!(f, "{CSI}{n}C"),
+            Control::CursorBack(n) => write!(f, "{CSI}{n}D"),
+
+            Control::CursorNextLine(n) => write!(f, "{CSI}{n}E"),
+            Control::CursorPreviousLine(n) => write!(f, "{CSI}{n}F"),
+
+            Control::CursorMoveInLine(n) => write!(f, "{CSI}{n}G"),
+            Control::CursorMove(x, y) => write!(f, "{CSI}{x};{y}H"),
+
+            Control::EraseForward => write!(f, "{CSI}0J"),
+            Control::EraseBack => write!(f, "{CSI}1J"),
+            Control::EraseDisplay => write!(f, "{CSI}2J"),
+            Control::EraseAll => write!(f, "{CSI}3J"),
+
+            Control::EraseForwardInLine => write!(f, "{CSI}0K"),
+            Control::EraseBackInLine => write!(f, "{CSI}1K"),
+            Control::EraseLine => write!(f, "{CSI}2K"),
+
+            Control::SaveCursor => write!(f, "{CSI}s"),
+            Control::RestoreCursor => write!(f, "{CSI}u"),
+
+            Control::ShowCursor => write!(f, "{CSI}?25h"),
+            Control::HideCursor => write!(f, "{CSI}?25l"),
+        }
     }
 }
 
 #[derive(Debug, Default)]
-struct AnsiStyle {
-    bold: bool,      // -> code:1
-    dim: bool,       // -> code:2
-    italic: bool,    // -> code:3
-    underline: bool, // -> code:4
-    fg: Color,       // -> code: 30-37, 90-97
-    bg: Color,       // -> code: 40-47, 100-107
-}
+pub struct Style(SmallVec<[u8; 8]>);
 
 macro_rules! impl_style_method {
-    ($n:ident) => {
-        fn $n(&mut self) -> &mut Self {
-            self.$n = true;
+    ($fn:ident, $code:expr) => {
+        pub fn $fn(mut self) -> Self {
+            self.0.push($code);
             self
         }
     };
 }
 
-macro_rules! impl_color_method {
-    ($fg:ident, $bg:ident, $c:path) => {
-        fn $fg(&mut self) -> &mut Self {
-            self.fg = $c;
-            self
-        }
-
-        fn $bg(&mut self) -> &mut Self {
-            self.bg = $c;
-            self
-        }
-    };
-}
-
-impl AnsiStyle {
-    fn codes(&self) -> impl Iterator<Item = u8> {
-        let mut code = [0u8; 6];
-        if self.bold {
-            code[0] = 1;
-        }
-        if self.dim {
-            code[1] = 2;
-        }
-        if self.italic {
-            code[2] = 3;
-        }
-        if self.underline {
-            code[3] = 4;
-        }
-        if self.fg != Color::None {
-            code[4] = self.fg.fg_code();
-        }
-        if self.bg != Color::None {
-            code[5] = self.bg.bg_code();
-        }
-        code.into_iter().filter(|code| *code != 0)
+impl Style {
+    pub fn new() -> Self {
+        Self::default()
     }
 
-    impl_style_method!(bold);
-    impl_style_method!(dim);
-    impl_style_method!(italic);
-    impl_style_method!(underline);
+    impl_style_method!(reset, 0);
 
-    impl_color_method!(black, bg_black, Color::Black);
-    impl_color_method!(red, bg_red, Color::Red);
-    impl_color_method!(green, bg_green, Color::Green);
-    impl_color_method!(yellow, bg_yellow, Color::Yellow);
-    impl_color_method!(blue, bg_blue, Color::Blue);
-    impl_color_method!(magenta, bg_magenta, Color::Magenta);
-    impl_color_method!(cyan, bg_cyan, Color::Cyan);
-    impl_color_method!(white, bg_white, Color::White);
-    impl_color_method!(bright_black, bg_bright_black, Color::BrightBlack);
-    impl_color_method!(bright_red, bg_bright_red, Color::BrightRed);
-    impl_color_method!(bright_green, bg_bright_green, Color::BrightGreen);
-    impl_color_method!(bright_yellow, bg_bright_yellow, Color::BrightYellow);
-    impl_color_method!(bright_blue, bg_bright_blue, Color::BrightBlue);
-    impl_color_method!(bright_magenta, bg_bright_magenta, Color::BrightMagenta);
-    impl_color_method!(bright_cyan, bg_bright_cyan, Color::BrightCyan);
-    impl_color_method!(bright_white, bg_bright_white, Color::BrightWhite);
+    impl_style_method!(bold, 1);
+    impl_style_method!(dimmed, 2);
+    impl_style_method!(italic, 3);
+    impl_style_method!(underline, 4);
+
+    impl_style_method!(black, 30);
+    impl_style_method!(red, 31);
+    impl_style_method!(green, 32);
+    impl_style_method!(yellow, 33);
+    impl_style_method!(blue, 34);
+    impl_style_method!(magenta, 35);
+    impl_style_method!(cyan, 36);
+    impl_style_method!(white, 37);
+
+    pub fn color_8bit(mut self, n: u8) -> Self {
+        self.0.push(38);
+        self.0.push(5);
+        self.0.push(n);
+        self
+    }
+
+    pub fn color_rgb(mut self, r: u8, g: u8, b: u8) -> Self {
+        self.0.push(38);
+        self.0.push(2);
+        self.0.push(r);
+        self.0.push(g);
+        self.0.push(b);
+        self
+    }
+
+    impl_style_method!(default_color, 39);
+
+    impl_style_method!(bg_black, 40);
+    impl_style_method!(bg_red, 41);
+    impl_style_method!(bg_green, 42);
+    impl_style_method!(bg_yellow, 43);
+    impl_style_method!(bg_blue, 44);
+    impl_style_method!(bg_magenta, 45);
+    impl_style_method!(bg_cyan, 46);
+    impl_style_method!(bg_white, 47);
+
+    pub fn bg_color_8bit(mut self, n: u8) -> Self {
+        self.0.push(48);
+        self.0.push(5);
+        self.0.push(n);
+        self
+    }
+
+    pub fn bg_color_rgb(mut self, r: u8, g: u8, b: u8) -> Self {
+        self.0.push(48);
+        self.0.push(2);
+        self.0.push(r);
+        self.0.push(g);
+        self.0.push(b);
+        self
+    }
+
+    impl_style_method!(bg_default_color, 49);
+
+    impl_style_method!(bright_black, 90);
+    impl_style_method!(bright_red, 91);
+    impl_style_method!(bright_green, 92);
+    impl_style_method!(bright_yellow, 93);
+    impl_style_method!(bright_blue, 94);
+    impl_style_method!(bright_magenta, 95);
+    impl_style_method!(bright_cyan, 96);
+    impl_style_method!(bright_white, 97);
+
+    impl_style_method!(bg_bright_black, 100);
+    impl_style_method!(bg_bright_red, 101);
+    impl_style_method!(bg_bright_green, 102);
+    impl_style_method!(bg_bright_yellow, 103);
+    impl_style_method!(bg_bright_blue, 104);
+    impl_style_method!(bg_bright_magenta, 105);
+    impl_style_method!(bg_bright_cyan, 106);
+    impl_style_method!(bg_bright_white, 107);
+}
+
+pub fn style() -> Style {
+    Style::default()
+}
+
+impl std::fmt::Display for Style {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut iter = self.0.iter();
+        if let Some(code) = iter.next() {
+            write!(f, "{CSI}{code}")?;
+            for code in iter {
+                write!(f, ";{code}")?;
+            }
+            write!(f, "m")?;
+        }
+        Ok(())
+    }
 }
 
 #[derive(Debug)]
-pub struct AnsiStyled<T> {
+pub struct Styled<T> {
     target: T,
-    style: AnsiStyle,
-}
-
-macro_rules! impl_all {
-    ($impl_item:ident) => {
-        $impl_item!(bold);
-        $impl_item!(dim);
-        $impl_item!(italic);
-        $impl_item!(underline);
-        $impl_item!(black);
-        $impl_item!(bg_black);
-        $impl_item!(red);
-        $impl_item!(bg_red);
-        $impl_item!(green);
-        $impl_item!(bg_green);
-        $impl_item!(yellow);
-        $impl_item!(bg_yellow);
-        $impl_item!(blue);
-        $impl_item!(bg_blue);
-        $impl_item!(magenta);
-        $impl_item!(bg_magenta);
-        $impl_item!(cyan);
-        $impl_item!(bg_cyan);
-        $impl_item!(white);
-        $impl_item!(bg_white);
-        $impl_item!(bright_black);
-        $impl_item!(bg_bright_black);
-        $impl_item!(bright_red);
-        $impl_item!(bg_bright_red);
-        $impl_item!(bright_green);
-        $impl_item!(bg_bright_green);
-        $impl_item!(bright_yellow);
-        $impl_item!(bg_bright_yellow);
-        $impl_item!(bright_blue);
-        $impl_item!(bg_bright_blue);
-        $impl_item!(bright_magenta);
-        $impl_item!(bg_bright_magenta);
-        $impl_item!(bright_cyan);
-        $impl_item!(bg_bright_cyan);
-        $impl_item!(bright_white);
-        $impl_item!(bg_bright_white);
-    };
+    style: Style,
 }
 
 macro_rules! impl_styled_method {
     ($fn:ident) => {
         pub fn $fn(mut self) -> Self {
-            self.style.$fn();
+            self.style = self.style.$fn();
             self
         }
     };
 }
 
-impl<T> AnsiStyled<T>
-where
-    T: std::fmt::Display,
-{
-    impl_all!(impl_styled_method);
+impl<T> Styled<T> {
+    impl_styled_method!(bold);
+    impl_styled_method!(dimmed);
+    impl_styled_method!(italic);
+    impl_styled_method!(underline);
+
+    impl_styled_method!(black);
+    impl_styled_method!(red);
+    impl_styled_method!(green);
+    impl_styled_method!(yellow);
+    impl_styled_method!(blue);
+    impl_styled_method!(magenta);
+    impl_styled_method!(cyan);
+    impl_styled_method!(white);
+
+    pub fn color_8bit(mut self, n: u8) -> Self {
+        self.style = self.style.color_8bit(n);
+        self
+    }
+
+    pub fn color_rgb(mut self, r: u8, g: u8, b: u8) -> Self {
+        self.style = self.style.color_rgb(r, g, b);
+        self
+    }
+
+    impl_styled_method!(default_color);
+
+    impl_styled_method!(bg_black);
+    impl_styled_method!(bg_red);
+    impl_styled_method!(bg_green);
+    impl_styled_method!(bg_yellow);
+    impl_styled_method!(bg_blue);
+    impl_styled_method!(bg_magenta);
+    impl_styled_method!(bg_cyan);
+    impl_styled_method!(bg_white);
+
+    pub fn bg_color_8bit(mut self, n: u8) -> Self {
+        self.style = self.style.bg_color_8bit(n);
+        self
+    }
+
+    pub fn bg_color_rgb(mut self, r: u8, g: u8, b: u8) -> Self {
+        self.style = self.style.bg_color_rgb(r, g, b);
+        self
+    }
+
+    impl_styled_method!(bg_default_color);
+
+    impl_styled_method!(bright_black);
+    impl_styled_method!(bright_red);
+    impl_styled_method!(bright_green);
+    impl_styled_method!(bright_yellow);
+    impl_styled_method!(bright_blue);
+    impl_styled_method!(bright_magenta);
+    impl_styled_method!(bright_cyan);
+    impl_styled_method!(bright_white);
+
+    impl_styled_method!(bg_bright_black);
+    impl_styled_method!(bg_bright_red);
+    impl_styled_method!(bg_bright_green);
+    impl_styled_method!(bg_bright_yellow);
+    impl_styled_method!(bg_bright_blue);
+    impl_styled_method!(bg_bright_magenta);
+    impl_styled_method!(bg_bright_cyan);
+    impl_styled_method!(bg_bright_white);
 }
 
-const RESET: &str = "\x1B[0m";
-
-impl<T> std::fmt::Display for AnsiStyled<T>
-where
-    T: std::fmt::Display,
-{
+impl<T: std::fmt::Display> std::fmt::Display for Styled<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match std::env::var_os("NO_COLOR").is_some() {
-            true => write!(f, "{}", self.target),
-            false => {
-                let mut codes = self.style.codes();
-                if let Some(code) = codes.next() {
-                    write!(f, "\x1B[{code}")?;
-                    for code in codes {
-                        write!(f, ";{code}")?;
-                    }
-                    write!(f, "m{}{}", self.target, RESET)
-                } else {
-                    write!(f, "{}", self.target)
-                }
-            }
-        }
+        write!(f, "{}{}{}", self.style, self.target, style().reset())
     }
 }
 
-macro_rules! impl_trait_method {
+macro_rules! impl_ext_method {
     ($fn:ident) => {
-        fn $fn(self) -> AnsiStyled<Self> {
-            let mut style = AnsiStyle::default();
-            style.$fn();
-            AnsiStyled {
+        fn $fn(self) -> Styled<Self> {
+            let style = style().$fn();
+            Styled {
                 target: self,
                 style,
             }
@@ -211,19 +278,109 @@ macro_rules! impl_trait_method {
     };
 }
 
-pub trait AnsiStyleExt: std::fmt::Display + Sized {
-    impl_all!(impl_trait_method);
+pub trait StyleExt: std::fmt::Display + Sized {
+    impl_ext_method!(bold);
+    impl_ext_method!(dimmed);
+    impl_ext_method!(italic);
+    impl_ext_method!(underline);
+
+    impl_ext_method!(black);
+    impl_ext_method!(red);
+    impl_ext_method!(green);
+    impl_ext_method!(yellow);
+    impl_ext_method!(blue);
+    impl_ext_method!(magenta);
+    impl_ext_method!(cyan);
+    impl_ext_method!(white);
+
+    fn color_8bit(self, n: u8) -> Styled<Self> {
+        let style = style().color_8bit(n);
+        Styled {
+            target: self,
+            style,
+        }
+    }
+
+    fn color_rgb(self, r: u8, g: u8, b: u8) -> Styled<Self> {
+        let style = style().color_rgb(r, g, b);
+        Styled {
+            target: self,
+            style,
+        }
+    }
+
+    impl_ext_method!(bg_default_color);
+
+    impl_ext_method!(bg_black);
+    impl_ext_method!(bg_red);
+    impl_ext_method!(bg_green);
+    impl_ext_method!(bg_yellow);
+    impl_ext_method!(bg_blue);
+    impl_ext_method!(bg_magenta);
+    impl_ext_method!(bg_cyan);
+    impl_ext_method!(bg_white);
+
+    fn bg_color_8bit(self, n: u8) -> Styled<Self> {
+        let style = style().bg_color_8bit(n);
+        Styled {
+            target: self,
+            style,
+        }
+    }
+
+    fn bg_color_rgb(self, r: u8, g: u8, b: u8) -> Styled<Self> {
+        let style = style().bg_color_rgb(r, g, b);
+        Styled {
+            target: self,
+            style,
+        }
+    }
+
+    impl_ext_method!(default_color);
+
+    impl_ext_method!(bright_black);
+    impl_ext_method!(bright_red);
+    impl_ext_method!(bright_green);
+    impl_ext_method!(bright_yellow);
+    impl_ext_method!(bright_blue);
+    impl_ext_method!(bright_magenta);
+    impl_ext_method!(bright_cyan);
+    impl_ext_method!(bright_white);
+
+    impl_ext_method!(bg_bright_black);
+    impl_ext_method!(bg_bright_red);
+    impl_ext_method!(bg_bright_green);
+    impl_ext_method!(bg_bright_yellow);
+    impl_ext_method!(bg_bright_blue);
+    impl_ext_method!(bg_bright_magenta);
+    impl_ext_method!(bg_bright_cyan);
+    impl_ext_method!(bg_bright_white);
 }
 
-impl<T> AnsiStyleExt for T where T: std::fmt::Display + Sized {}
+impl<T> StyleExt for T where T: std::fmt::Display + Sized {}
 
 #[cfg(test)]
 mod test {
     use super::*;
 
     #[test]
-    fn test() {
-        assert_eq!("a".red().to_string(), "\x1B[31ma\x1B[0m");
-        assert_eq!("a".red().bold().to_string(), "\x1B[1;31ma\x1B[0m");
+    fn control_test() {
+        assert_eq!(Control::CursorUp(3).to_string(), "\x1B[3A");
+    }
+
+    #[test]
+    fn style_test() {
+        assert_eq!(style().red().to_string(), "\x1B[31m");
+        assert_eq!(style().red().bold().to_string(), "\x1B[31;1m");
+        assert_eq!(style().to_string(), "");
+        assert_eq!(style().reset().to_string(), "\x1B[0m");
+    }
+
+    #[test]
+    fn style_ext_test() {
+        assert_eq!(
+            "xxx".black().bg_white().underline().to_string(),
+            "\x1B[30;47;4mxxx\x1B[0m",
+        );
     }
 }

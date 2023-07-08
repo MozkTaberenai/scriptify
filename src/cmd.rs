@@ -78,9 +78,9 @@ fn echo_command_info(command: &Command, echo: &mut Echo) {
     }
 }
 
-pub enum UnknownStdio {}
+pub enum InheritStdio {}
 
-pub struct Cmd<I = UnknownStdio, O = UnknownStdio> {
+pub struct Cmd<I = InheritStdio, O = InheritStdio> {
     inner: Command,
     quiet: bool,
     _marker: PhantomData<fn() -> (I, O)>,
@@ -111,7 +111,7 @@ impl<I, O> Cmd<I, O> {
         }
     }
 
-    pub fn stdin(mut self, cfg: impl Into<Stdio>) -> Cmd<UnknownStdio, O> {
+    pub fn stdin(mut self, cfg: impl Into<Stdio>) -> Cmd<InheritStdio, O> {
         self.inner.stdin(cfg);
         Cmd {
             inner: self.inner,
@@ -120,7 +120,7 @@ impl<I, O> Cmd<I, O> {
         }
     }
 
-    pub fn stdout(mut self, cfg: impl Into<Stdio>) -> Cmd<I, UnknownStdio> {
+    pub fn stdout(mut self, cfg: impl Into<Stdio>) -> Cmd<I, InheritStdio> {
         self.inner.stdout(cfg);
         Cmd {
             inner: self.inner,
@@ -165,7 +165,7 @@ impl<I, O> Cmd<I, O> {
     }
 
     fn _echo(&self, pipein: bool, pipeout: bool) -> Echo {
-        let mut echo = Echo::new();
+        let mut echo = Echo::default();
 
         if self.quiet {
             echo.quiet();
@@ -271,14 +271,14 @@ impl Cmd {
     }
 }
 
-impl Cmd<ChildStdin, UnknownStdio> {
+impl Cmd<ChildStdin, InheritStdio> {
     pub fn spawn(self) -> Result<(ChildStdin, Child)> {
         let (child, stdin, _) = self._spawn(true, false)?;
         Ok((stdin.unwrap(), child))
     }
 }
 
-impl Cmd<UnknownStdio, ChildStdout> {
+impl Cmd<InheritStdio, ChildStdout> {
     pub fn spawn(self) -> Result<(ChildStdout, Child)> {
         let (child, _, stdout) = self._spawn(false, true)?;
         Ok((stdout.unwrap(), child))
@@ -297,7 +297,7 @@ impl<I, O> From<Cmd<I, O>> for Command {
     }
 }
 
-pub struct Pipeline<I = UnknownStdio, O = UnknownStdio> {
+pub struct Pipeline<I = InheritStdio, O = InheritStdio> {
     commands: Vec<Command>,
     quiet: bool,
     _marker: PhantomData<fn() -> (I, O)>,
@@ -336,7 +336,7 @@ impl<I, O> Pipeline<I, O> {
     }
 
     fn _echo(&self, pipein: bool, pipeout: bool) {
-        let mut echo = Echo::new();
+        let mut echo = Echo::default();
 
         if self.quiet {
             echo.quiet();
@@ -432,14 +432,14 @@ impl Pipeline {
     }
 }
 
-impl Pipeline<ChildStdin, UnknownStdio> {
+impl Pipeline<ChildStdin, InheritStdio> {
     pub fn spawn(self) -> Result<(ChildStdin, PipelineChildren)> {
         let (children, stdin, _) = self._spawn(true, false)?;
         Ok((stdin.unwrap(), children))
     }
 }
 
-impl Pipeline<UnknownStdio, ChildStdout> {
+impl Pipeline<InheritStdio, ChildStdout> {
     pub fn spawn(self) -> Result<(ChildStdout, PipelineChildren)> {
         let (children, _, stdout) = self._spawn(false, true)?;
         Ok((stdout.unwrap(), children))
