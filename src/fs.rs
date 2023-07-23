@@ -1,11 +1,9 @@
-use super::*;
+use crate::ansi::StyleExt;
+use std::path::Path;
 
 macro_rules! echo {
     ($($arg:expr),* $(,)?) => {
-        let mut echo = Echo::new();
-        echo.put("fs".bright_black());
-        $(echo.put($arg);)*
-        echo.end();
+        $crate::echo!("fs".bright_black(), $($arg,)*);
     };
 }
 
@@ -104,7 +102,7 @@ pub fn write(path: impl AsRef<Path>, contents: impl AsRef<[u8]>) -> std::io::Res
     let contents = contents.as_ref();
     echo!(
         "write".bold().cyan(),
-        format!("{} bytes", contents.len()),
+        format_args!("{} bytes", contents.len()),
         "->",
         path.to_string_lossy().bold().underline(),
     );

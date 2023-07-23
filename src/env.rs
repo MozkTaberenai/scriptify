@@ -1,11 +1,10 @@
-use super::*;
+use crate::ansi::StyleExt;
+use std::ffi::OsStr;
+use std::path::Path;
 
 macro_rules! echo {
     ($($arg:expr),* $(,)?) => {
-        let mut echo = Echo::new();
-        echo.put("env".bright_black());
-        $(echo.put($arg);)*
-        echo.end();
+        $crate::echo!("env".bright_black(), $($arg,)*);
     };
 }
 

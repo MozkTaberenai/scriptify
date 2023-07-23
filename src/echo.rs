@@ -1,3 +1,9 @@
+pub trait EchoTrait {
+    fn begin_echo(&self) -> std::fmt::Result;
+    fn put_echo_item(&self, item: impl std::fmt::Display) -> std::fmt::Result;
+    fn end_echo(&self) -> std::fmt::Result;
+}
+
 pub enum Echo {
     Null,
     Head,
@@ -41,4 +47,16 @@ impl Echo {
             _ => println!(),
         }
     }
+}
+
+#[macro_export]
+macro_rules! echo {
+    () => {
+        println!();
+    };
+    ($($arg:expr),* $(,)?) => {
+        let mut echo = $crate::echo::Echo::new();
+        $(echo.put($arg);)*
+        echo.end();
+    };
 }
