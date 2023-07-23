@@ -134,6 +134,18 @@ impl Command {
     pub fn run(self) -> Result<Status, Error> {
         self.spawn()?.wait()
     }
+
+    pub fn pipe_stdio(self) -> Pipeline<Piped, Piped> {
+        Pipeline::from(self).pipe_stdio()
+    }
+
+    pub fn pipe_stdin(self) -> Pipeline<Piped, Inherit> {
+        Pipeline::from(self).pipe_stdin()
+    }
+
+    pub fn pipe_stdout(self) -> Pipeline<Inherit, Piped> {
+        Pipeline::from(self).pipe_stdout()
+    }
 }
 
 impl Pipe<Command> for Command {
@@ -158,18 +170,18 @@ impl Spawn<Handle> for Command {
 
 impl ReadSpawn<Handle> for Command {
     fn read_spawn(self) -> Result<(PipeStdout, Handle), Error> {
-        Pipeline::from(self).pipe_stdout().read_spawn()
+        self.pipe_stdout().read_spawn()
     }
 }
 
 impl WriteSpawn<Handle> for Command {
     fn write_spawn(self) -> Result<(PipeStdin, Handle), Error> {
-        Pipeline::from(self).pipe_stdin().write_spawn()
+        self.pipe_stdin().write_spawn()
     }
 }
 
 impl WriteReadSpawn for Command {
     fn write_read_spawn(self) -> Result<(PipeStdin, PipeStdout, Handle), Error> {
-        Pipeline::from(self).pipe_stdio().write_read_spawn()
+        self.pipe_stdio().write_read_spawn()
     }
 }
