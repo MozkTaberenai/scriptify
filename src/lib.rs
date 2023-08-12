@@ -13,5 +13,6 @@ pub mod prelude {
     pub use std::io::{prelude::*, BufReader, BufWriter};
     pub use std::path::{Path, PathBuf};
     pub type AnyError = Box<dyn std::error::Error>;
+    pub type Result<T, E = AnyError> = std::result::Result<T, E>;
 }
 pub use prelude::*;

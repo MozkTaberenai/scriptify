@@ -1,6 +1,6 @@
 use scriptant::*;
 
-fn main() -> Result<(), AnyError> {
+fn main() -> Result<()> {
     fs::create_dir("tmp")?;
 
     fs::write("tmp/a.txt", "abc")?;

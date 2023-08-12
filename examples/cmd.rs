@@ -1,6 +1,6 @@
 use scriptant::*;
 
-fn main() -> Result<(), AnyError> {
+fn main() -> Result<()> {
     cmd!("echo", "a").run()?;
     cmd!("echo", "with space").run()?;
     cmd!("echo").args((0..10).map(|n| n.to_string())).run()?;
