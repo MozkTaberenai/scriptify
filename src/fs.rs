@@ -1,11 +1,9 @@
-// use crate::echo::Echo;
-// use anstyle::{AnsiColor, Color, Style};
-use crate::style;
+use crate::{style, Style};
 use std::path::Path;
 
-const BRIGHT_BLACK: crate::echo::Style = style().bright_black();
-const BOLD_UNDERLINE: crate::echo::Style = style().bold().underline();
-const BOLD_CYAN: crate::echo::Style = style().bold().cyan();
+const BRIGHT_BLACK: Style = style().bright_black();
+const BOLD_UNDERLINE: Style = style().bold().underline();
+const BOLD_CYAN: Style = style().bold().cyan();
 
 fn echo(op: impl std::fmt::Display) -> crate::Echo {
     crate::echo().sput("fs", BRIGHT_BLACK).sput(op, BOLD_CYAN)

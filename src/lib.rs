@@ -7,10 +7,13 @@ pub type Result<T, E = AnyError> = std::result::Result<T, E>;
 mod cmd;
 pub use cmd::*;
 
-mod echo;
-pub use echo::{echo, style, Echo, Style};
-
 pub mod fs;
+
+mod echo;
+pub use echo::{echo, Echo};
+
+mod style;
+pub use style::{style, Style};
 
 #[macro_export]
 macro_rules! cmd {

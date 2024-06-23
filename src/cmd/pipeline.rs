@@ -4,15 +4,16 @@ use super::handle::{Handle, ThreadHandle};
 use super::io::{ChildStdin, ChildStdout, Inherit, Piped};
 use super::spawn::*;
 use super::status::Status;
+use crate::{style, Echo, Style};
 
-const BRIGHT_BLACK: crate::Style = crate::style().bright_black();
-const MAGENTA: crate::Style = crate::style().magenta();
+const BRIGHT_BLACK: Style = style().bright_black();
+const MAGENTA: Style = style().magenta();
 const RESET: anstyle::Reset = anstyle::Reset;
 
-fn echo(quiet: bool) -> crate::Echo {
+fn echo(quiet: bool) -> Echo {
     match quiet {
-        true => crate::Echo::quiet(),
-        false => crate::Echo::new(),
+        true => Echo::quiet(),
+        false => Echo::new(),
     }
     .sput("cmd", BRIGHT_BLACK)
 }
