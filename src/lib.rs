@@ -1,18 +1,35 @@
-pub mod ansi;
-pub mod cmd;
-pub mod confirm;
-pub mod echo;
-pub mod env;
+pub use std::ffi::{OsStr, OsString};
+pub use std::io::{prelude::*, BufReader, BufWriter};
+pub use std::path::{Path, PathBuf};
+pub type AnyError = Box<dyn std::error::Error>;
+pub type Result<T, E = AnyError> = std::result::Result<T, E>;
+
+mod cmd;
+pub use cmd::*;
+
+mod echo;
+pub use echo::{echo, style, Echo, Style};
+
 pub mod fs;
 
-pub use ansi::StyleExt;
-pub use cmd::{Pipe, ReadSpawn, ReadSpawnExt, Spawn, WriteReadSpawn, WriteSpawn};
-
-pub mod prelude {
-    pub use std::ffi::{OsStr, OsString};
-    pub use std::io::{prelude::*, BufReader, BufWriter};
-    pub use std::path::{Path, PathBuf};
-    pub type AnyError = Box<dyn std::error::Error>;
-    pub type Result<T, E = AnyError> = std::result::Result<T, E>;
+#[macro_export]
+macro_rules! cmd {
+    ($program:expr) => {
+        $crate::Command::new($program)
+    };
+    ($program:expr, $($arg:expr),* $(,)?) => {
+        $crate::Command::new($program)$(.arg($arg))*
+    };
 }
-pub use prelude::*;
+
+#[macro_export]
+macro_rules! echo {
+    ($($arg:expr),* $(,)?) => {
+        $crate::Echo::new()
+            $(.put($arg))*
+            .end();
+    };
+    () => {
+        println!();
+    };
+}

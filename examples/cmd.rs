@@ -8,7 +8,7 @@ fn main() -> Result<()> {
     cmd!("ls", "-alF").current_dir("src").run()?;
 
     if let Err(err) = cmd!("unknown_command", "and", "run").run() {
-        echo!(err);
+        echo().put(err).end();
     }
 
     cmd!("date")
@@ -17,14 +17,14 @@ fn main() -> Result<()> {
         .run()?;
 
     let out = cmd!("echo", "pipe input").read_to_string()?;
-    echo!("pipe output:".blue(), out.trim());
+    echo!("pipe output:", out.trim());
 
     b"pipe input from slice\n"
         .pipe(cmd!("tr", "[:lower:]", "[:upper:]"))
         .run()?;
 
     let pipe_input = "abcde";
-    echo!("pipe input:".blue(), pipe_input);
+    echo!("pipe input:", pipe_input);
     pipe_input
         .as_bytes()
         .pipe(cmd!("rev"))
@@ -34,7 +34,7 @@ fn main() -> Result<()> {
     let out = cmd!("date", "-uR")
         .pipe(cmd!("tr", "[:lower:]", "[:upper:]"))
         .read_to_string()?;
-    echo!("pipe output:".blue(), out.trim());
+    echo!("pipe output:", out.trim());
 
     let (mut stdin, handle) = cmd!("tr", "[:lower:]", "[:upper:]").write_spawn()?;
     writeln!(stdin, "x")?;

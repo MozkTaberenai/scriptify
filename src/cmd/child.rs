@@ -1,4 +1,5 @@
-use super::*;
+use super::command::Command;
+use super::err::Error;
 
 #[derive(Debug)]
 pub(crate) struct Child {

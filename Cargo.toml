@@ -1,6 +1,6 @@
 [package]
 name = "scriptant"
-version = "0.10.0"
+version = "1.0.0"
 edition = "2021"
 authors = ["Mozk Taberenai <mozk@me.com>"]
 license = "MIT"
@@ -9,13 +9,10 @@ repository = "https://github.com/MozkTaberenai/scriptant"
 homepage = "https://github.com/MozkTaberenai/scriptant"
 categories = ["command-line-interface"]
 
+[dependencies]
+anstyle = "1.0.7"
+
 [[example]]
 name = "cmd"
 [[example]]
-name = "env"
-[[example]]
 name = "fs"
-[[example]]
-name = "ansi"
-[[example]]
-name = "ansi-true-color"

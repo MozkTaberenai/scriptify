@@ -1,5 +1,21 @@
-use super::*;
-use crate::*;
+use super::child::Child;
+use super::err::Error;
+use super::handle::Handle;
+use super::io::{ChildStdin, ChildStdout, Inherit, Piped};
+use super::pipeline::{Pipe, Pipeline};
+use super::spawn::*;
+use super::status::Status;
+use crate::{style, Style};
+use std::ffi::OsStr;
+use std::path::Path;
+
+const BRIGHT_BLUE: Style = style().bright_blue();
+const BRIGHT_BLACK: Style = style().bright_black();
+const UNDERLINE: Style = style().underline();
+const BOLD_UNDERLINE: Style = style().bold().underline();
+const UNDERLINE_BRIGHT_BLUE: Style = style().underline().bright_blue();
+const BOLD_CYAN: Style = style().bold().cyan();
+const RESET: anstyle::Reset = anstyle::Reset;
 
 #[derive(Debug)]
 pub struct Command {
@@ -14,9 +30,8 @@ impl std::fmt::Display for Command {
         if let Some(current_dir) = self.inner.get_current_dir() {
             write!(
                 f,
-                "{}{}",
-                "cd:".bright_blue(),
-                current_dir.to_string_lossy().underline().bright_blue(),
+                "{BRIGHT_BLUE}cd:{UNDERLINE}{}{RESET}",
+                current_dir.to_string_lossy()
             )?;
             somethin_written = true;
         }
@@ -28,22 +43,13 @@ impl std::fmt::Display for Command {
                     write!(f, " ")?;
                 }
                 if let Some(v) = v {
-                    write!(
-                        f,
-                        "{}{}{}{}",
-                        "env:".bright_blue(),
-                        k.to_string_lossy().underline().bright_blue(),
-                        "=".bright_black(),
-                        v.to_string_lossy().underline().bright_blue(),
-                    )?;
+                    write!(f, "{BRIGHT_BLUE}env:{RESET}")?;
+                    write!(f, "{BRIGHT_BLUE}{UNDERLINE}{}{RESET}", k.to_string_lossy())?;
+                    write!(f, "{BRIGHT_BLACK}={RESET}")?;
+                    write!(f, "{UNDERLINE_BRIGHT_BLUE}{}{RESET}", v.to_string_lossy())?;
                 } else {
-                    write!(
-                        f,
-                        "{}{}{}",
-                        "env:".bright_blue(),
-                        "!".bright_blue(),
-                        k.to_string_lossy().underline().bright_blue(),
-                    )?;
+                    write!(f, "{BRIGHT_BLUE}env:!{RESET}")?;
+                    write!(f, "{UNDERLINE_BRIGHT_BLUE}{}{RESET}", k.to_string_lossy())?;
                 }
                 somethin_written = true;
             }
@@ -54,12 +60,12 @@ impl std::fmt::Display for Command {
         }
         write!(
             f,
-            "{}",
-            self.inner.get_program().to_string_lossy().bold().cyan()
+            "{BOLD_CYAN}{}{RESET}",
+            self.inner.get_program().to_string_lossy()
         )?;
 
         for arg in self.inner.get_args() {
-            write!(f, " {}", arg.to_string_lossy().underline().bold())?;
+            write!(f, " {BOLD_UNDERLINE}{}{RESET}", arg.to_string_lossy())?;
         }
 
         Ok(())
@@ -169,19 +175,19 @@ impl Spawn<Handle> for Command {
 }
 
 impl ReadSpawn<Handle> for Command {
-    fn read_spawn(self) -> Result<(PipeStdout, Handle), Error> {
+    fn read_spawn(self) -> Result<(ChildStdout, Handle), Error> {
         self.pipe_stdout().read_spawn()
     }
 }
 
 impl WriteSpawn<Handle> for Command {
-    fn write_spawn(self) -> Result<(PipeStdin, Handle), Error> {
+    fn write_spawn(self) -> Result<(ChildStdin, Handle), Error> {
         self.pipe_stdin().write_spawn()
     }
 }
 
 impl WriteReadSpawn for Command {
-    fn write_read_spawn(self) -> Result<(PipeStdin, PipeStdout, Handle), Error> {
+    fn write_read_spawn(self) -> Result<(ChildStdin, ChildStdout, Handle), Error> {
         self.pipe_stdio().write_read_spawn()
     }
 }

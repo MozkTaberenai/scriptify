@@ -1,10 +1,15 @@
-use std::io::Read;
-use std::process::{ChildStdin, ChildStdout};
+#[derive(Debug)]
+pub struct Inherit;
 
 #[derive(Debug)]
-pub struct PipeStdin(pub(crate) ChildStdin);
+pub struct Piped;
 
-impl std::io::Write for PipeStdin {
+use std::io::{Read, Write};
+
+#[derive(Debug)]
+pub struct ChildStdin(pub(crate) std::process::ChildStdin);
+
+impl Write for ChildStdin {
     #[inline]
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         self.0.write(buf)
@@ -17,16 +22,16 @@ impl std::io::Write for PipeStdin {
 }
 
 #[derive(Debug)]
-pub struct PipeStdout(pub(crate) ChildStdout);
+pub struct ChildStdout(pub(crate) std::process::ChildStdout);
 
-impl std::io::Read for PipeStdout {
+impl Read for ChildStdout {
     #[inline]
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         self.0.read(buf)
     }
 }
 
-impl PipeStdout {
+impl ChildStdout {
     pub fn read_to_end(&mut self) -> std::io::Result<Vec<u8>> {
         let mut vec = vec![];
         self.0.read_to_end(&mut vec)?;
@@ -39,6 +44,3 @@ impl PipeStdout {
         Ok(string)
     }
 }
-
-mod reader;
-mod writer;

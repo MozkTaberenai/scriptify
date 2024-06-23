@@ -33,6 +33,6 @@ fn main() -> Result<()> {
 fn show_metadata(path: impl AsRef<Path>) -> std::io::Result<()> {
     let path = path.as_ref();
     let metadata = std::fs::metadata(path)?;
-    echo!(path.display().blue(), format_args!("{metadata:?}"));
+    echo!(path.display(), format_args!("{metadata:?}"));
     Ok(())
 }

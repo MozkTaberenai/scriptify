@@ -1,4 +1,7 @@
-use super::*;
+use super::child::Child;
+use super::err::Error;
+use super::io::{ChildStdin, ChildStdout};
+use super::status::Status;
 
 #[derive(Debug, Default)]
 pub struct Handle(pub(crate) Vec<Child>);
@@ -24,20 +27,20 @@ impl Handle {
         Ok(Status(status))
     }
 
-    pub(crate) fn take_stdin(&mut self) -> Option<PipeStdin> {
+    pub(crate) fn take_stdin(&mut self) -> Option<ChildStdin> {
         self.0
             .first_mut()
             .expect("handle has no children")
             .take_stdin()
-            .map(PipeStdin)
+            .map(ChildStdin)
     }
 
-    pub(crate) fn take_stdout(&mut self) -> Option<PipeStdout> {
+    pub(crate) fn take_stdout(&mut self) -> Option<ChildStdout> {
         self.0
             .last_mut()
             .expect("handle has no children")
             .take_stdout()
-            .map(PipeStdout)
+            .map(ChildStdout)
     }
 }
 
@@ -48,11 +51,11 @@ pub struct ThreadHandle<T> {
 }
 
 impl<T> ThreadHandle<T> {
-    pub(crate) fn take_stdin(&mut self) -> Option<PipeStdin> {
+    pub(crate) fn take_stdin(&mut self) -> Option<ChildStdin> {
         self.handle.take_stdin()
     }
 
-    pub(crate) fn take_stdout(&mut self) -> Option<PipeStdout> {
+    pub(crate) fn take_stdout(&mut self) -> Option<ChildStdout> {
         self.handle.take_stdout()
     }
 

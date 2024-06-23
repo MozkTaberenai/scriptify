@@ -1,62 +1,174 @@
-pub trait EchoTrait {
-    fn begin_echo(&self) -> std::fmt::Result;
-    fn put_echo_item(&self, item: impl std::fmt::Display) -> std::fmt::Result;
-    fn end_echo(&self) -> std::fmt::Result;
+pub fn echo() -> Echo {
+    Echo::default()
 }
 
+#[derive(Debug)]
+#[must_use]
 pub enum Echo {
-    Null,
+    Quiet,
     Head,
     Tail,
 }
 
 impl Default for Echo {
     fn default() -> Self {
-        match std::env::var_os("NO_ECHO").is_some() {
-            true => Self::Null,
-            false => Self::Head,
-        }
+        Self::new()
     }
 }
 
 impl Echo {
     pub fn new() -> Self {
-        Self::default()
+        match std::env::var_os("NO_ECHO").is_some() {
+            true => Self::Quiet,
+            false => Self::Head,
+        }
     }
 
-    pub fn quiet(&mut self) -> &mut Self {
-        *self = Self::Null;
-        self
+    pub fn quiet() -> Self {
+        Self::Quiet
     }
 
-    pub fn put(&mut self, arg: impl std::fmt::Display) -> &mut Self {
+    pub fn put(self, arg: impl std::fmt::Display) -> Self {
         match self {
-            Self::Null => {}
+            Self::Quiet => Self::Quiet,
             Self::Head => {
                 print!("{arg}");
-                *self = Self::Tail;
+                Self::Tail
             }
-            Self::Tail => print!(" {arg}"),
+            Self::Tail => {
+                print!(" {arg}");
+                Self::Tail
+            }
         }
-        self
+    }
+
+    pub fn sput(self, arg: impl std::fmt::Display, style: Style) -> Self {
+        self.put(format_args!("{style}{arg}{style:#}"))
     }
 
     pub fn end(self) {
         match self {
-            Self::Null => {}
+            Self::Quiet => {}
             _ => println!(),
         }
     }
 }
 
-#[macro_export]
-macro_rules! echo {
-    () => {
-        println!();
-    };
-    ($($arg:expr),* $(,)?) => {
-        let mut echo = $crate::echo::Echo::new();
-        $(echo.put($arg);)*
-        echo.end();
+pub const fn style() -> Style {
+    Style::new()
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+pub struct Style(anstyle::Style);
+
+impl std::fmt::Display for Style {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl Style {
+    pub const fn new() -> Self {
+        Self(anstyle::Style::new())
+    }
+
+    pub const fn blink(self) -> Self {
+        Self(self.0.blink())
+    }
+
+    pub const fn bold(self) -> Self {
+        Self(self.0.bold())
+    }
+
+    pub const fn dimmed(self) -> Self {
+        Self(self.0.dimmed())
+    }
+
+    pub const fn hidden(self) -> Self {
+        Self(self.0.hidden())
+    }
+
+    pub const fn invert(self) -> Self {
+        Self(self.0.invert())
+    }
+
+    pub const fn italic(self) -> Self {
+        Self(self.0.italic())
+    }
+
+    pub const fn strikethrough(self) -> Self {
+        Self(self.0.strikethrough())
+    }
+
+    pub const fn underline(self) -> Self {
+        Self(self.0.underline())
+    }
+
+    pub const fn reset(self) -> Self {
+        Self::new()
+    }
+}
+
+macro_rules! impl_color {
+    ($color:ident, $ground:ident, $ansi:ident) => {
+        impl Style {
+            pub const fn $color(self) -> Self {
+                Self(
+                    self.0
+                        .$ground(Some(anstyle::Color::Ansi(anstyle::AnsiColor::$ansi))),
+                )
+            }
+        }
     };
 }
+
+impl_color!(black, fg_color, Black);
+impl_color!(red, fg_color, Red);
+impl_color!(green, fg_color, Green);
+impl_color!(yellow, fg_color, Yellow);
+impl_color!(blue, fg_color, Blue);
+impl_color!(magenta, fg_color, Magenta);
+impl_color!(cyan, fg_color, Cyan);
+impl_color!(white, fg_color, White);
+impl_color!(bright_black, fg_color, BrightBlack);
+impl_color!(bright_red, fg_color, BrightRed);
+impl_color!(bright_green, fg_color, BrightGreen);
+impl_color!(bright_yellow, fg_color, BrightYellow);
+impl_color!(bright_blue, fg_color, BrightBlue);
+impl_color!(bright_magenta, fg_color, BrightMagenta);
+impl_color!(bright_cyan, fg_color, BrightCyan);
+impl_color!(bright_white, fg_color, BrightWhite);
+
+impl_color!(bg_black, bg_color, Black);
+impl_color!(bg_red, bg_color, Red);
+impl_color!(bg_green, bg_color, Green);
+impl_color!(bg_yellow, bg_color, Yellow);
+impl_color!(bg_blue, bg_color, Blue);
+impl_color!(bg_magenta, bg_color, Magenta);
+impl_color!(bg_cyan, bg_color, Cyan);
+impl_color!(bg_white, bg_color, White);
+impl_color!(bg_bright_black, bg_color, BrightBlack);
+impl_color!(bg_bright_red, bg_color, BrightRed);
+impl_color!(bg_bright_green, bg_color, BrightGreen);
+impl_color!(bg_bright_yellow, bg_color, BrightYellow);
+impl_color!(bg_bright_blue, bg_color, BrightBlue);
+impl_color!(bg_bright_magenta, bg_color, BrightMagenta);
+impl_color!(bg_bright_cyan, bg_color, BrightCyan);
+impl_color!(bg_bright_white, bg_color, BrightWhite);
+
+impl_color!(underline_black, underline_color, Black);
+impl_color!(underline_red, underline_color, Red);
+impl_color!(underline_green, underline_color, Green);
+impl_color!(underline_yellow, underline_color, Yellow);
+impl_color!(underline_blue, underline_color, Blue);
+impl_color!(underline_magenta, underline_color, Magenta);
+impl_color!(underline_cyan, underline_color, Cyan);
+impl_color!(underline_white, underline_color, White);
+impl_color!(underline_bright_black, underline_color, BrightBlack);
+impl_color!(underline_bright_red, underline_color, BrightRed);
+impl_color!(underline_bright_green, underline_color, BrightGreen);
+impl_color!(underline_bright_yellow, underline_color, BrightYellow);
+impl_color!(underline_bright_blue, underline_color, BrightBlue);
+impl_color!(underline_bright_magenta, underline_color, BrightMagenta);
+impl_color!(underline_bright_cyan, underline_color, BrightCyan);
+impl_color!(underline_bright_white, underline_color, BrightWhite);

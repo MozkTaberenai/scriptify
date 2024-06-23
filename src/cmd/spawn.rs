@@ -1,15 +1,17 @@
-use super::*;
+use super::err::Error;
+use super::handle::Handle;
+use super::io::{ChildStdin, ChildStdout};
 
 pub trait Spawn<T>: Sized {
     fn spawn(self) -> Result<T, Error>;
 }
 
 pub trait WriteSpawn<T>: Spawn<T> {
-    fn write_spawn(self) -> Result<(PipeStdin, T), Error>;
+    fn write_spawn(self) -> Result<(ChildStdin, T), Error>;
 }
 
 pub trait ReadSpawn<T>: Spawn<T> {
-    fn read_spawn(self) -> Result<(PipeStdout, T), Error>;
+    fn read_spawn(self) -> Result<(ChildStdout, T), Error>;
 }
 
 pub trait ReadSpawnExt<T>: ReadSpawn<T> {
@@ -18,7 +20,7 @@ pub trait ReadSpawnExt<T>: ReadSpawn<T> {
 }
 
 pub trait WriteReadSpawn: Spawn<Handle> {
-    fn write_read_spawn(self) -> Result<(PipeStdin, PipeStdout, Handle), Error>;
+    fn write_read_spawn(self) -> Result<(ChildStdin, ChildStdout, Handle), Error>;
 }
 
 impl<T> ReadSpawnExt<Handle> for T
