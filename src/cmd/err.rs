@@ -1,4 +1,4 @@
-use crate::{style, Style};
+use crate::{style, style::Style};
 
 const BLUE: Style = style().blue();
 const BOLD_YELLOW: Style = style().bold().yellow();

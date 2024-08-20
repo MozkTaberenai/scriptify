@@ -5,7 +5,7 @@ use super::io::{ChildStdin, ChildStdout, Inherit, Piped};
 use super::pipeline::{Pipe, Pipeline};
 use super::spawn::*;
 use super::status::Status;
-use crate::{style, Style};
+use crate::{style, style::Style};
 use std::ffi::OsStr;
 use std::path::Path;
 
@@ -17,6 +17,7 @@ const UNDERLINE_BRIGHT_BLUE: Style = style().underline().bright_blue();
 const BOLD_CYAN: Style = style().bold().cyan();
 const RESET: anstyle::Reset = anstyle::Reset;
 
+/// A wrapper for std::proccess::Command with echoes.
 #[derive(Debug)]
 pub struct Command {
     pub(crate) inner: std::process::Command,
@@ -73,6 +74,7 @@ impl std::fmt::Display for Command {
 }
 
 impl Command {
+    /// Constructs a new `Command` for launching the program at `program`.
     pub fn new(program: impl AsRef<OsStr>) -> Self {
         Command {
             inner: std::process::Command::new(program),
@@ -112,6 +114,8 @@ impl Command {
         self
     }
 
+    /// Adds an argument to pass to the program.
+    ///
     pub fn arg(mut self, arg: impl AsRef<OsStr>) -> Self {
         self.inner.arg(arg);
         self

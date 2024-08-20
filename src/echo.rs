@@ -1,4 +1,6 @@
-use crate::Style;
+//! Echo module for printing messages to the console.
+
+use crate::style::Style;
 
 pub fn echo() -> Echo {
     Echo::default()

@@ -4,7 +4,7 @@ use super::handle::{Handle, ThreadHandle};
 use super::io::{ChildStdin, ChildStdout, Inherit, Piped};
 use super::spawn::*;
 use super::status::Status;
-use crate::{style, Echo, Style};
+use crate::{echo::Echo, style, style::Style};
 
 const BRIGHT_BLACK: Style = style().bright_black();
 const MAGENTA: Style = style().magenta();
@@ -18,6 +18,7 @@ fn echo(quiet: bool) -> Echo {
     .sput("cmd", BRIGHT_BLACK)
 }
 
+/// A trait for piping commands.
 pub trait Pipe<I> {
     type In;
     type Out;

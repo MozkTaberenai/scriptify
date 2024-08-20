@@ -1,7 +1,9 @@
+/// Shorthand function of Style::new()
 pub const fn style() -> Style {
     Style::new()
 }
 
+/// ANSI Text styling
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Style(anstyle::Style);
 
