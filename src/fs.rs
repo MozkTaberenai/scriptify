@@ -1,18 +1,23 @@
+//! File system operations.
+//!
 //! This module provides wrappers around `std::fs` functions that echo the operation to the console.
+//! It offers a set of functions for working with files and directories.
 //!
 //! # Examples
 //!
 //! ```
 //! use scriptant::*;
-//! fs::rename("old_name.txt", "new_name.txt");
+//!
+//! fn main() -> std::io::Result<()> {
+//!     fs::write("foo.txt", "Hello, world!")?;
+//!     fs::read_to_string("foo.txt")?;
+//!     fs::remove_file("foo.txt")?;
+//!     Ok(())
+//! }
 //! ```
 //!
-//! This will rename the file `old_name.txt` to `new_name.txt` and print the operation to the console.
-//!
-//! # Note
-//!
-//! All functions in this module return `std::io::Result`, which means that they will return an error
-//! if the operation fails for any reason (for example, if the file does not exist).
+//! For more information on the behavior of these functions, see the documentation for the corresponding
+//! functions in [`std::fs`].
 
 use crate::{echo::Echo, style, style::Style};
 use std::path::Path;
@@ -25,32 +30,20 @@ fn echo(op: impl std::fmt::Display) -> Echo {
     crate::echo().sput("fs", BRIGHT_BLACK).sput(op, BOLD_CYAN)
 }
 
-/// Renames a file or directory, as specified by `from`, to `to`.
+/// Rename a file or directory to a new name, replacing the original file if `to` already exists.
 ///
-/// This function will rename the file or directory at the path specified by `from` to the path specified by `to`.
-/// If the `from` path does not exist, the function will return an error. If the `to` path already exists, it will be overwritten.
-///
-/// This function also prints the operation to the console.
+/// This is a wrapper around [`std::fs::rename`] that echoes the operation to the console.
 ///
 /// # Examples
 ///
-/// ```
+/// ```no_run
 /// use scriptant::*;
-/// fs::rename("old_name.txt", "new_name.txt");
+///
+/// fn main() -> std::io::Result<()> {
+///     fs::rename("old.txt", "new.txt")?;
+///     Ok(())
+/// }
 /// ```
-///
-/// This will rename the file `old_name.txt` to `new_name.txt` and print the operation to the console.
-///
-/// # Errors
-///
-/// This function will return an error in the following situations, but is not limited to just these cases:
-///
-/// * The `from` path does not exist.
-/// * The user lacks permissions to view or modify the `from` or `to` path.
-///
-/// # Note
-///
-/// This function relies on [`std::fs::rename`] from the standard library.
 pub fn rename(from: impl AsRef<Path>, to: impl AsRef<Path>) -> std::io::Result<()> {
     let from = from.as_ref();
     let to = to.as_ref();
@@ -62,32 +55,20 @@ pub fn rename(from: impl AsRef<Path>, to: impl AsRef<Path>) -> std::io::Result<(
     std::fs::rename(from, to)
 }
 
-/// Copies a file from `from` to `to`.
+/// Copy the contents of one file to another.
 ///
-/// This function will copy the file at the path specified by `from` to the path specified by `to`.
-/// If the `from` path does not exist, the function will return an error. If the `to` path already exists, it will be overwritten.
-///
-/// This function also prints the operation to the console.
+/// This is a wrapper around [`std::fs::copy`] that echoes the operation to the console.
 ///
 /// # Examples
 ///
-/// ```
+/// ```no_run
 /// use scriptant::*;
-/// fs::copy("source.txt", "destination.txt");
+///
+/// fn main() -> std::io::Result<()> {
+///     fs::copy("foo.txt", "bar.txt")?;
+///     Ok(())
+/// }
 /// ```
-///
-/// This will copy the file `source.txt` to `destination.txt` and print the operation to the console.
-///
-/// # Errors
-///
-/// This function will return an error in the following situations, but is not limited to just these cases:
-///
-/// * The `from` path does not exist.
-/// * The user lacks permissions to view or modify the `from` or `to` path.
-///
-/// # Note
-///
-/// This function relies on [`std::fs::copy`] from the standard library.
 pub fn copy(from: impl AsRef<Path>, to: impl AsRef<Path>) -> std::io::Result<u64> {
     let from = from.as_ref();
     let to = to.as_ref();
@@ -99,32 +80,20 @@ pub fn copy(from: impl AsRef<Path>, to: impl AsRef<Path>) -> std::io::Result<u64
     std::fs::copy(from, to)
 }
 
-/// Creates a hard link from `original` to `link`.
+/// Create a new hard link to a file.
 ///
-/// This function will create a hard link from the file at the path specified by `original` to the path specified by `link`.
-/// If the `original` path does not exist, the function will return an error.
-///
-/// This function also prints the operation to the console.
+/// This is a wrapper around [`std::fs::hard_link`] that echoes the operation to the console.
 ///
 /// # Examples
 ///
-/// ```
+/// ```no_run
 /// use scriptant::*;
-/// fs::hard_link("original.txt", "link.txt");
+///
+/// fn main() -> std::io::Result<()> {
+///     fs::hard_link("old.txt", "new.txt")?;
+///     Ok(())
+/// }
 /// ```
-///
-/// This will create a hard link from the file `original.txt` to `link.txt` and print the operation to the console.
-///
-/// # Errors
-///
-/// This function will return an error in the following situations, but is not limited to just these cases:
-///
-/// * The `original` path does not exist.
-/// * The user lacks permissions to view or modify the `original` or `link` path.
-///
-/// # Note
-///
-/// This function relies on [`std::fs::hard_link`] from the standard library.
 pub fn hard_link(original: impl AsRef<Path>, link: impl AsRef<Path>) -> std::io::Result<()> {
     let original = original.as_ref();
     let link = link.as_ref();
@@ -136,32 +105,20 @@ pub fn hard_link(original: impl AsRef<Path>, link: impl AsRef<Path>) -> std::io:
     std::fs::hard_link(original, link)
 }
 
-/// Creates a new directory at the path specified by `path`.
+/// Create a new, empty directory at the provided path.
 ///
-/// This function will create a new directory at the path specified by `path`.
-/// If the directory already exists, the function will return an error.
-///
-/// This function also prints the operation to the console.
+/// This is a wrapper around [`std::fs::create_dir`] that echoes the operation to the console.
 ///
 /// # Examples
 ///
-/// ```
+/// ```no_run
 /// use scriptant::*;
-/// fs::create_dir("new_directory");
+///
+/// fn main() -> std::io::Result<()> {
+///     fs::create_dir("./some/dir")?;
+///     Ok(())
+/// }
 /// ```
-///
-/// This will create a new directory named `new_directory` and print the operation to the console.
-///
-/// # Errors
-///
-/// This function will return an error in the following situations, but is not limited to just these cases:
-///
-/// * The `path` already exists.
-/// * The user lacks permissions to create the directory at the specified `path`.
-///
-/// # Note
-///
-/// This function relies on [`std::fs::create_dir`] from the standard library.
 pub fn create_dir(path: impl AsRef<Path>) -> std::io::Result<()> {
     let path = path.as_ref();
     echo("create_dir")
@@ -170,30 +127,20 @@ pub fn create_dir(path: impl AsRef<Path>) -> std::io::Result<()> {
     std::fs::create_dir(path)
 }
 
-/// Creates a new directory and all its parent directories if they do not exist.
+/// Recursively create a directory and all of its parent components if they are missing.
 ///
-/// This function will create a new directory and all its parent directories if they do not exist.
-///
-/// This function also prints the operation to the console.
+/// This is a wrapper around [`std::fs::create_dir_all`] that echoes the operation to the console.
 ///
 /// # Examples
 ///
-/// ```
+/// ```no_run
 /// use scriptant::*;
-/// fs::create_dir_all("a/b/c");
+///
+/// fn main() -> std::io::Result<()> {
+///     fs::create_dir_all("./some/dir")?;
+///     Ok(())
+/// }
 /// ```
-///
-/// This will create a new directory at `a/b/c` and all its parent directories if they do not exist, and print the operation to the console.
-///
-/// # Errors
-///
-/// This function will return an error in the following situations, but is not limited to just these cases:
-///
-/// * The user lacks permissions to create the directory at the specified `path`.
-///
-/// # Note
-///
-/// This function relies on [`std::fs::create_dir_all`] from the standard library.
 pub fn create_dir_all(path: impl AsRef<Path>) -> std::io::Result<()> {
     let path = path.as_ref();
     echo("create_dir_all")
@@ -202,32 +149,21 @@ pub fn create_dir_all(path: impl AsRef<Path>) -> std::io::Result<()> {
     std::fs::create_dir_all(path)
 }
 
-/// Retrieves metadata for the file or directory at `path`.
+/// Given a path, query the file system to get information about a file, directory, etc.
 ///
-/// This function will retrieve metadata for the file or directory at `path`.
-/// If the path does not exist, the function will return an error.
-///
-/// This function also prints the operation to the console.
+/// This is a wrapper around [`std::fs::metadata`] that echoes the operation to the console.
 ///
 /// # Examples
 ///
-/// ```
+/// ```no_run
 /// use scriptant::*;
-/// fs::metadata("file.txt");
+///
+/// fn main() -> std::io::Result<()> {
+///     let metadata = fs::metadata("foo.txt")?;
+///     println!("{:?}", metadata.file_type());
+///     Ok(())
+/// }
 /// ```
-///
-/// This will retrieve metadata for the file `file.txt` and print the operation to the console.
-///
-/// # Errors
-///
-/// This function will return an error in the following situations, but is not limited to just these cases:
-///
-/// * The `path` does not exist.
-/// * The user lacks permissions to view the metadata of the file or directory at the specified `path`.
-///
-/// # Note
-///
-/// This function relies on [`std::fs::metadata`] from the standard library.
 pub fn metadata(path: impl AsRef<Path>) -> std::io::Result<std::fs::Metadata> {
     let path = path.as_ref();
     echo("metadata")
@@ -236,32 +172,23 @@ pub fn metadata(path: impl AsRef<Path>) -> std::io::Result<std::fs::Metadata> {
     std::fs::metadata(path)
 }
 
-/// Reads the directory at `path` and returns an iterator to the entries.
+/// Returns an iterator over the entries within a directory.
 ///
-/// This function will read the directory at `path` and return an iterator to the entries.
-/// If the path does not exist, the function will return an error.
-///
-/// This function also prints the operation to the console.
+/// This is a wrapper around [`std::fs::read_dir`] that echoes the operation to the console.
 ///
 /// # Examples
 ///
-/// ```
+/// ```no_run
 /// use scriptant::*;
-/// fs::read_dir("directory");
+///
+/// fn main() -> std::io::Result<()> {
+///     for entry in fs::read_dir(".")? {
+///         let entry = entry?;
+///         println!("{:?}", entry.path());
+///     }
+///     Ok(())
+/// }
 /// ```
-///
-/// This will read the directory `directory` and return an iterator to the entries, and print the operation to the console.
-///
-/// # Errors
-///
-/// This function will return an error in the following situations, but is not limited to just these cases:
-///
-/// * The `path` does not exist.
-/// * The user lacks permissions to read the directory at the specified `path`.
-///
-/// # Note
-///
-/// This function relies on [`std::fs::read_dir`] from the standard library.
 pub fn read_dir(path: impl AsRef<Path>) -> std::io::Result<std::fs::ReadDir> {
     let path = path.as_ref();
     echo("read_dir")
@@ -270,32 +197,21 @@ pub fn read_dir(path: impl AsRef<Path>) -> std::io::Result<std::fs::ReadDir> {
     std::fs::read_dir(path)
 }
 
-/// Reads the file at `path` and returns its contents as a vector of bytes.
+/// Read the entire contents of a file into a bytes vector.
 ///
-/// This function will read the file at `path` and return its contents as a vector of bytes.
-/// If the path does not exist, the function will return an error.
-///
-/// This function also prints the operation to the console.
+/// This is a wrapper around [`std::fs::read`] that echoes the operation to the console.
 ///
 /// # Examples
 ///
-/// ```
+/// ```no_run
 /// use scriptant::*;
-/// fs::read("file.txt");
+///
+/// fn main() -> std::io::Result<()> {
+///     let contents = fs::read("foo.txt")?;
+///     println!("{:?}", contents);
+///     Ok(())
+/// }
 /// ```
-///
-/// This will read the file `file.txt` and return its contents as a vector of bytes, and print the operation to the console.
-///
-/// # Errors
-///
-/// This function will return an error in the following situations, but is not limited to just these cases:
-///
-/// * The `path` does not exist.
-/// * The user lacks permissions to read the file at the specified `path`.
-///
-/// # Note
-///
-/// This function relies on [`std::fs::read`] from the standard library.
 pub fn read(path: impl AsRef<Path>) -> std::io::Result<Vec<u8>> {
     let path = path.as_ref();
     echo("read")
@@ -304,32 +220,21 @@ pub fn read(path: impl AsRef<Path>) -> std::io::Result<Vec<u8>> {
     std::fs::read(path)
 }
 
-/// Reads the file at `path` and returns its contents as a string.
+/// Read the entire contents of a file into a string.
 ///
-/// This function will read the file at `path` and return its contents as a string.
-/// If the path does not exist, the function will return an error.
-///
-/// This function also prints the operation to the console.
+/// This is a wrapper around [`std::fs::read_to_string`] that echoes the operation to the console.
 ///
 /// # Examples
 ///
-/// ```
+/// ```no_run
 /// use scriptant::*;
-/// fs::read_to_string("file.txt");
+///
+/// fn main() -> std::io::Result<()> {
+///     let contents = fs::read_to_string("foo.txt")?;
+///     println!("{}", contents);
+///     Ok(())
+/// }
 /// ```
-///
-/// This will read the file `file.txt` and return its contents as a string, and print the operation to the console.
-///
-/// # Errors
-///
-/// This function will return an error in the following situations, but is not limited to just these cases:
-///
-/// * The `path` does not exist.
-/// * The user lacks permissions to read the file at the specified `path`.
-///
-/// # Note
-///
-/// This function relies on [`std::fs::read_to_string`] from the standard library.
 pub fn read_to_string(path: impl AsRef<Path>) -> std::io::Result<String> {
     let path = path.as_ref();
     echo("read_to_string")
@@ -338,31 +243,20 @@ pub fn read_to_string(path: impl AsRef<Path>) -> std::io::Result<String> {
     std::fs::read_to_string(path)
 }
 
-/// Writes `contents` to the file at `path`.
+/// Write a slice as the entire contents of a file.
 ///
-/// This function will write `contents` to the file at `path`.
-/// If the path does not exist, the function will create it.
-///
-/// This function also prints the operation to the console.
+/// This is a wrapper around [`std::fs::write`] that echoes the operation to the console.
 ///
 /// # Examples
 ///
-/// ```
+/// ```no_run
 /// use scriptant::*;
-/// fs::write("file.txt", b"Hello, world!");
+///
+/// fn main() -> std::io::Result<()> {
+///     fs::write("foo.txt", b"Hello, world!")?;
+///     Ok(())
+/// }
 /// ```
-///
-/// This will write the byte string `b"Hello, world!"` to the file `file.txt`, and print the operation to the console.
-///
-/// # Errors
-///
-/// This function will return an error in the following situations, but is not limited to just these cases:
-///
-/// * The user lacks permissions to write to the file at the specified `path`.
-///
-/// # Note
-///
-/// This function relies on [`std::fs::write`] from the standard library.
 pub fn write(path: impl AsRef<Path>, contents: impl AsRef<[u8]>) -> std::io::Result<()> {
     let path = path.as_ref();
     let contents = contents.as_ref();
@@ -374,32 +268,20 @@ pub fn write(path: impl AsRef<Path>, contents: impl AsRef<[u8]>) -> std::io::Res
     std::fs::write(path, contents)
 }
 
-/// Removes the directory at `path`.
+/// Removes an empty directory.
 ///
-/// This function will remove the directory at `path`.
-/// If the path does not exist, the function will return an error.
-///
-/// This function also prints the operation to the console.
+/// This is a wrapper around [`std::fs::remove_dir`] that echoes the operation to the console.
 ///
 /// # Examples
 ///
-/// ```
+/// ```no_run
 /// use scriptant::*;
-/// fs::remove_dir("directory");
+///
+/// fn main() -> std::io::Result<()> {
+///     fs::remove_dir("./some/dir")?;
+///     Ok(())
+/// }
 /// ```
-///
-/// This will remove the directory `directory` and print the operation to the console.
-///
-/// # Errors
-///
-/// This function will return an error in the following situations, but is not limited to just these cases:
-///
-/// * The `path` does not exist.
-/// * The user lacks permissions to remove the directory at the specified `path`.
-///
-/// # Note
-///
-/// This function relies on [`std::fs::remove_dir`] from the standard library.
 pub fn remove_dir(path: impl AsRef<Path>) -> std::io::Result<()> {
     let path = path.as_ref();
     echo("remove_dir")
@@ -408,32 +290,20 @@ pub fn remove_dir(path: impl AsRef<Path>) -> std::io::Result<()> {
     std::fs::remove_dir(path)
 }
 
-/// Removes the directory at `path` and all its contents.
+/// Removes a directory at this path, after removing all its contents. Use carefully!
 ///
-/// This function will remove the directory at `path` and all its contents.
-/// If the path does not exist, the function will return an error.
-///
-/// This function also prints the operation to the console.
+/// This is a wrapper around [`std::fs::remove_dir_all`] that echoes the operation to the console.
 ///
 /// # Examples
 ///
-/// ```
+/// ```no_run
 /// use scriptant::*;
-/// fs::remove_dir_all("directory");
+///
+/// fn main() -> std::io::Result<()> {
+///     fs::remove_dir_all("./some/dir")?;
+///     Ok(())
+/// }
 /// ```
-///
-/// This will remove the directory `directory` and all its contents, and print the operation to the console.
-///
-/// # Errors
-///
-/// This function will return an error in the following situations, but is not limited to just these cases:
-///
-/// * The `path` does not exist.
-/// * The user lacks permissions to remove the directory at the specified `path`.
-///
-/// # Note
-///
-/// This function relies on [`std::fs::remove_dir_all`] from the standard library.
 pub fn remove_dir_all(path: impl AsRef<Path>) -> std::io::Result<()> {
     let path = path.as_ref();
     echo("remove_dir_all")
@@ -442,32 +312,20 @@ pub fn remove_dir_all(path: impl AsRef<Path>) -> std::io::Result<()> {
     std::fs::remove_dir_all(path)
 }
 
-/// Removes the file at `path`.
+/// Removes a file from the filesystem.
 ///
-/// This function will remove the file at `path`.
-/// If the path does not exist, the function will return an error.
-///
-/// This function also prints the operation to the console.
+/// This is a wrapper around [`std::fs::remove_file`] that echoes the operation to the console.
 ///
 /// # Examples
 ///
-/// ```
+/// ```no_run
 /// use scriptant::*;
-/// fs::remove_file("file.txt");
+///
+/// fn main() -> std::io::Result<()> {
+///     fs::remove_file("foo.txt")?;
+///     Ok(())
+/// }
 /// ```
-///
-/// This will remove the file `file.txt` and print the operation to the console.
-///
-/// # Errors
-///
-/// This function will return an error in the following situations, but is not limited to just these cases:
-///
-/// * The `path` does not exist.
-/// * The user lacks permissions to remove the file at the specified `path`.
-///
-/// # Note
-///
-/// This function relies on [`std::fs::remove_file`] from the standard library.
 pub fn remove_file(path: impl AsRef<Path>) -> std::io::Result<()> {
     let path = path.as_ref();
     echo("remove_file")
