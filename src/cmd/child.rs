@@ -18,7 +18,7 @@ impl Child {
 
     pub fn wait(mut self) -> Result<std::process::ExitStatus, Error> {
         self.std_child.wait().map_err(|source| Error {
-            on: Some(self.command.to_string()),
+            about: Some(self.command.to_string()),
             source,
         })
     }

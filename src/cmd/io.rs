@@ -6,6 +6,8 @@ pub struct Piped;
 
 use std::io::{Read, Write};
 
+/// A handle to the standard input of a child process.
+/// It implements the Write trait.
 #[derive(Debug)]
 pub struct ChildStdin(pub(crate) std::process::ChildStdin);
 
@@ -21,6 +23,8 @@ impl Write for ChildStdin {
     }
 }
 
+/// A handle to the standard output of a child process.
+/// It implements the Read trait.
 #[derive(Debug)]
 pub struct ChildStdout(pub(crate) std::process::ChildStdout);
 
@@ -28,19 +32,5 @@ impl Read for ChildStdout {
     #[inline]
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         self.0.read(buf)
-    }
-}
-
-impl ChildStdout {
-    pub fn read_to_end(&mut self) -> std::io::Result<Vec<u8>> {
-        let mut vec = vec![];
-        self.0.read_to_end(&mut vec)?;
-        Ok(vec)
-    }
-
-    pub fn read_to_string(&mut self) -> std::io::Result<String> {
-        let mut string = String::new();
-        self.0.read_to_string(&mut string)?;
-        Ok(string)
     }
 }

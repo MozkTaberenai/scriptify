@@ -17,7 +17,6 @@ const UNDERLINE_BRIGHT_BLUE: Style = style().underline().bright_blue();
 const BOLD_CYAN: Style = style().bold().cyan();
 const RESET: anstyle::Reset = anstyle::Reset;
 
-/// A wrapper for std::proccess::Command with echoes.
 #[derive(Debug)]
 pub struct Command {
     pub(crate) inner: std::process::Command,
@@ -74,7 +73,9 @@ impl std::fmt::Display for Command {
 }
 
 impl Command {
-    /// Constructs a new `Command` for launching the program at `program`.
+    /// Creates a new `Command` instance with the specified program.
+    ///
+    /// Argument `program` is passed to `std::process::Command::new`.
     pub fn new(program: impl AsRef<OsStr>) -> Self {
         Command {
             inner: std::process::Command::new(program),
@@ -82,40 +83,88 @@ impl Command {
         }
     }
 
+    /// Returns a reference to the inner `std::process::Command`.
+    ///
+    /// # Returns
+    ///
+    /// A reference to the inner `std::process::Command`.
     pub fn get_inner_ref(&self) -> &std::process::Command {
         &self.inner
     }
 
+    /// Returns a mutable reference to the inner `std::process::Command`.
+    ///
+    /// # Returns
+    ///
+    /// A mutable reference to the inner `std::process::Command`.
     pub fn get_inner_mut(&mut self) -> &mut std::process::Command {
         &mut self.inner
     }
 
+    /// Consumes the `Command`, returning the inner `std::process::Command`.
+    ///
+    /// # Returns
+    ///
+    /// The inner `std::process::Command`.
     pub fn into_inner(self) -> std::process::Command {
         self.inner
     }
 
+    /// Sets the working directory for the child process.
+    ///
+    /// # Returns
+    ///
+    /// Returns `self` to allow for method chaining.
     pub fn current_dir(mut self, dir: impl AsRef<Path>) -> Self {
         self.inner.current_dir(dir);
         self
     }
 
+    /// Sets an environment variable for the child process.
+    ///
+    /// This method bridges to `std::process::Command::env`.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - The name of the environment variable.
+    /// * `val` - The value of the environment variable.
+    ///
+    /// # Returns
+    ///
+    /// Returns `self` to allow for method chaining.
     pub fn env(mut self, key: impl AsRef<OsStr>, val: impl AsRef<OsStr>) -> Self {
         self.inner.env(key, val);
         self
     }
 
+    /// Clears the entire environment for the child process.
+    ///
+    /// This method bridges to `std::process::Command::env_clear`.
+    ///
+    /// # Returns
+    ///
+    /// Returns `self` to allow for method chaining.
     pub fn env_clear(mut self) -> Self {
         self.inner.env_clear();
         self
     }
 
+    /// Removes an environment variable for the child process.
+    ///
+    /// This method bridges to `std::process::Command::env_remove`.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - The name of the environment variable to remove.
+    ///
+    /// # Returns
+    ///
+    /// Returns `self` to allow for method chaining.
     pub fn env_remove(mut self, key: impl AsRef<OsStr>) -> Self {
         self.inner.env_remove(key);
         self
     }
 
-    /// Adds an argument to pass to the program.
-    ///
     pub fn arg(mut self, arg: impl AsRef<OsStr>) -> Self {
         self.inner.arg(arg);
         self
@@ -134,7 +183,7 @@ impl Command {
     pub(crate) fn inner_spawn(mut self) -> Result<Child, Error> {
         Ok(Child {
             std_child: self.inner.spawn().map_err(|source| Error {
-                on: Some(self.to_string()),
+                about: Some(self.to_string()),
                 source,
             })?,
             command: self,

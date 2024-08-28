@@ -308,25 +308,6 @@ impl<R: std::io::Read + Send + 'static> ReadSpawn<ThreadHandle<()>> for Pipeline
     }
 }
 
-impl<T> ReadSpawnExt<ThreadHandle<()>> for T
-where
-    T: ReadSpawn<ThreadHandle<()>>,
-{
-    fn read_to_end(self) -> Result<Vec<u8>, Error> {
-        let (mut stdout, handle) = self.read_spawn()?;
-        let vec = stdout.read_to_end()?;
-        handle.wait()?;
-        Ok(vec)
-    }
-
-    fn read_to_string(self) -> Result<String, Error> {
-        let (mut stdout, handle) = self.read_spawn()?;
-        let string = stdout.read_to_string()?;
-        handle.wait()?;
-        Ok(string)
-    }
-}
-
 // Writer
 
 impl<W> Pipe<W> for Command

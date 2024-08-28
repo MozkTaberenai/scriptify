@@ -1,7 +1,9 @@
 use super::child::Child;
 use super::err::Error;
 use super::io::{ChildStdin, ChildStdout};
+use super::spawn::{ReadSpawn, ReadSpawnExt};
 use super::status::Status;
+use std::io::Read;
 
 #[derive(Debug, Default)]
 pub struct Handle(pub(crate) Vec<Child>);
@@ -44,6 +46,33 @@ impl Handle {
     }
 }
 
+impl<RS> ReadSpawnExt<Handle> for RS
+where
+    RS: ReadSpawn<Handle>,
+{
+    fn read_to_vec(self) -> Result<Vec<u8>, Error> {
+        let (mut stdout, handle) = self.read_spawn()?;
+        let mut vec = Vec::new();
+        stdout.read_to_end(&mut vec).map_err(|source| Error {
+            about: Some(handle.0.last().unwrap().command.to_string()),
+            source,
+        })?;
+        handle.wait()?;
+        Ok(vec)
+    }
+
+    fn read_to_string(self) -> Result<String, Error> {
+        let (mut stdout, handle) = self.read_spawn()?;
+        let mut string = String::new();
+        stdout.read_to_string(&mut string).map_err(|source| Error {
+            about: Some(handle.0.last().unwrap().command.to_string()),
+            source,
+        })?;
+        handle.wait()?;
+        Ok(string)
+    }
+}
+
 #[derive(Debug)]
 pub struct ThreadHandle<T> {
     pub(crate) handle: Handle,
@@ -63,5 +92,32 @@ impl<T> ThreadHandle<T> {
         let status = self.handle.wait()?;
         let writer = self.thread.join().expect("fail to join io thread")?;
         Ok((status, writer))
+    }
+}
+
+impl<T, RS> ReadSpawnExt<ThreadHandle<T>> for RS
+where
+    RS: ReadSpawn<ThreadHandle<T>>,
+{
+    fn read_to_vec(self) -> Result<Vec<u8>, Error> {
+        let (mut stdout, handle) = self.read_spawn()?;
+        let mut vec = Vec::new();
+        stdout.read_to_end(&mut vec).map_err(|source| Error {
+            about: Some(handle.handle.0.last().unwrap().command.to_string()),
+            source,
+        })?;
+        handle.wait()?;
+        Ok(vec)
+    }
+
+    fn read_to_string(self) -> Result<String, Error> {
+        let (mut stdout, handle) = self.read_spawn()?;
+        let mut string = String::new();
+        stdout.read_to_string(&mut string).map_err(|source| Error {
+            about: Some(handle.handle.0.last().unwrap().command.to_string()),
+            source,
+        })?;
+        handle.wait()?;
+        Ok(string)
     }
 }

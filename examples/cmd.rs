@@ -2,12 +2,12 @@ use scriptant::*;
 
 fn main() -> Result<()> {
     cmd!("echo", "a").run()?;
-    cmd!("echo", "with space").run()?;
     cmd!("echo").args((0..10).map(|n| n.to_string())).run()?;
-    cmd!("echo", "with env").env("AAA", "aaa").run()?;
+    cmd!("echo", "arg with  space").run()?;
+    cmd!("echo", "with", "env").env("AAA", "aaa").run()?;
     cmd!("ls", "-alF").current_dir("src").run()?;
 
-    if let Err(err) = cmd!("unknown_command", "and", "run").run() {
+    if let Err(err) = cmd!("unknown_command", "arg1", "arg2").run() {
         echo().put(err).end();
     }
 
