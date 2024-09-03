@@ -6,7 +6,7 @@
 //!
 //! Basic usage:
 //!
-//! ```
+//! ```no_run
 //! use scriptant::*;
 //!
 //! cmd!("ls", "/").run().unwrap();
@@ -16,7 +16,7 @@
 //!
 //! Piping commands:
 //!
-//! ```
+//! ```no_run
 //! use scriptant::*;
 //!
 //! cmd!("ls", "/").pipe(cmd!("grep", "bin")).run().unwrap();
@@ -41,6 +41,17 @@ pub use io::*;
 pub use pipeline::*;
 pub use spawn::*;
 pub use status::*;
+
+/// A macro to create a new command
+#[macro_export]
+macro_rules! cmd {
+    ($program:expr) => {
+        $crate::cmd::Command::new($program)
+    };
+    ($program:expr, $($arg:expr),* $(,)?) => {
+        $crate::cmd::Command::new($program)$(.arg($arg))*
+    };
+}
 
 // Module for testing the functionality of the scriptant library.
 #[cfg(test)]

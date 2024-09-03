@@ -1,13 +1,16 @@
+use std::io::{Read, Write};
+
+/// A standard I/O stream type for a pipeline that inherits from the parent process.
 #[derive(Debug)]
 pub struct Inherit;
 
+/// A standard I/O stream type for a pipeline which pipes from a reader or to a writer.
 #[derive(Debug)]
 pub struct Piped;
 
-use std::io::{Read, Write};
-
 /// A handle to the standard input of a child process.
-/// It implements the Write trait.
+///
+/// It implements the [`std::io::Write`] trait.
 #[derive(Debug)]
 pub struct ChildStdin(pub(crate) std::process::ChildStdin);
 
@@ -24,7 +27,8 @@ impl Write for ChildStdin {
 }
 
 /// A handle to the standard output of a child process.
-/// It implements the Read trait.
+///
+/// It implements the [`std::io::Read`] trait.
 #[derive(Debug)]
 pub struct ChildStdout(pub(crate) std::process::ChildStdout);
 

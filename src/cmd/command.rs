@@ -1,22 +1,19 @@
 use super::child::Child;
 use super::err::Error;
 use super::handle::Handle;
-use super::io::{ChildStdin, ChildStdout, Inherit, Piped};
+use super::io::{ChildStdin, ChildStdout, Inherit};
 use super::pipeline::{Pipe, Pipeline};
 use super::spawn::*;
 use super::status::Status;
-use crate::{style, style::Style};
+use crate::style::{
+    BOLD_CYAN, BOLD_UNDERLINE, BRIGHT_BLACK, BRIGHT_BLUE, RESET, UNDERLINE, UNDERLINE_BRIGHT_BLUE,
+};
 use std::ffi::OsStr;
 use std::path::Path;
 
-const BRIGHT_BLUE: Style = style().bright_blue();
-const BRIGHT_BLACK: Style = style().bright_black();
-const UNDERLINE: Style = style().underline();
-const BOLD_UNDERLINE: Style = style().bold().underline();
-const UNDERLINE_BRIGHT_BLUE: Style = style().underline().bright_blue();
-const BOLD_CYAN: Style = style().bold().cyan();
-const RESET: anstyle::Reset = anstyle::Reset;
-
+/// A command pipeline builder.
+///
+/// This struct represent a sigle command.
 #[derive(Debug)]
 pub struct Command {
     pub(crate) inner: std::process::Command,
@@ -165,22 +162,54 @@ impl Command {
         self
     }
 
+    /// Adds an argument to the command.
+    ///
+    /// # Arguments
+    ///
+    /// * `arg` - The argument to add.
+    ///
+    /// # Returns
+    ///
+    /// Returns `self` to allow for method chaining.
     pub fn arg(mut self, arg: impl AsRef<OsStr>) -> Self {
         self.inner.arg(arg);
         self
     }
 
+    /// Adds multiple arguments to the command.
+    ///
+    /// # Arguments
+    ///
+    /// * `args` - An iterator of arguments to add.
+    ///
+    /// # Returns
+    ///
+    /// Returns `self` to allow for method chaining.
     pub fn args(mut self, args: impl IntoIterator<Item = impl AsRef<OsStr>>) -> Self {
         self.inner.args(args);
         self
     }
 
+    /// Sets the command to run quietly (suppresses output).
+    ///
+    /// # Returns
+    ///
+    /// Returns `self` to allow for method chaining.
     pub fn quiet(mut self) -> Self {
         self.quiet = true;
         self
     }
 
-    pub(crate) fn inner_spawn(mut self) -> Result<Child, Error> {
+    /// Runs the command and waits for it to complete.
+    ///
+    /// # Returns
+    ///
+    /// Returns a `Result` containing the `Status` of the completed command, or an `Error` if the command fails.
+    pub fn run(self) -> Result<Status, Error> {
+        self.spawn()?.wait()
+    }
+
+    pub(crate) fn _spawn(mut self) -> Result<Child, Error> {
         Ok(Child {
             std_child: self.inner.spawn().map_err(|source| Error {
                 about: Some(self.to_string()),
@@ -188,22 +217,6 @@ impl Command {
             })?,
             command: self,
         })
-    }
-
-    pub fn run(self) -> Result<Status, Error> {
-        self.spawn()?.wait()
-    }
-
-    pub fn pipe_stdio(self) -> Pipeline<Piped, Piped> {
-        Pipeline::from(self).pipe_stdio()
-    }
-
-    pub fn pipe_stdin(self) -> Pipeline<Piped, Inherit> {
-        Pipeline::from(self).pipe_stdin()
-    }
-
-    pub fn pipe_stdout(self) -> Pipeline<Inherit, Piped> {
-        Pipeline::from(self).pipe_stdout()
     }
 }
 
@@ -229,18 +242,18 @@ impl Spawn<Handle> for Command {
 
 impl ReadSpawn<Handle> for Command {
     fn read_spawn(self) -> Result<(ChildStdout, Handle), Error> {
-        self.pipe_stdout().read_spawn()
+        Pipeline::from(self).pipe_stdout().read_spawn()
     }
 }
 
 impl WriteSpawn<Handle> for Command {
     fn write_spawn(self) -> Result<(ChildStdin, Handle), Error> {
-        self.pipe_stdin().write_spawn()
+        Pipeline::from(self).pipe_stdin().write_spawn()
     }
 }
 
 impl WriteReadSpawn for Command {
     fn write_read_spawn(self) -> Result<(ChildStdin, ChildStdout, Handle), Error> {
-        self.pipe_stdio().write_read_spawn()
+        Pipeline::from(self).pipe_stdio().write_read_spawn()
     }
 }

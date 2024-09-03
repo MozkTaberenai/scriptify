@@ -4,27 +4,27 @@ use super::handle::{Handle, ThreadHandle};
 use super::io::{ChildStdin, ChildStdout, Inherit, Piped};
 use super::spawn::*;
 use super::status::Status;
-use crate::{echo::Echo, style, style::Style};
+use crate::style::{BRIGHT_BLACK, MAGENTA, RESET};
 
-const BRIGHT_BLACK: Style = style().bright_black();
-const MAGENTA: Style = style().magenta();
-const RESET: anstyle::Reset = anstyle::Reset;
-
-fn echo(quiet: bool) -> Echo {
+fn echo(quiet: bool) -> crate::echo::Echo {
     match quiet {
-        true => Echo::quiet(),
-        false => Echo::new(),
+        true => crate::echo::Echo::quiet(),
+        false => crate::echo::Echo::new(),
     }
     .sput("cmd", BRIGHT_BLACK)
 }
 
 /// A trait for piping commands.
-pub trait Pipe<I> {
+pub trait Pipe<T> {
     type In;
     type Out;
-    fn pipe(self, to: I) -> Pipeline<Self::In, Self::Out>;
+    /// Pipe the output of a command to the input of another command or writer.
+    fn pipe(self, to: T) -> Pipeline<Self::In, Self::Out>;
 }
 
+/// A command pipeline builder.
+///
+/// This struct represents multiple commands.
 #[derive(Debug)]
 pub struct Pipeline<I, O> {
     pub(crate) inner: Vec<Command>,
@@ -57,12 +57,17 @@ impl<I, O> std::fmt::Display for Pipeline<I, O> {
 }
 
 impl<I, O> Pipeline<I, O> {
+    /// Sets the pipeline to run quietly (suppresses output).
+    ///
+    /// # Returns
+    ///
+    /// Returns `self` to allow for method chaining.
     pub fn quiet(mut self) -> Self {
         self.quiet = true;
         self
     }
 
-    pub(crate) fn inner_spawn(&mut self, pipein: bool, pipeout: bool) -> Result<Handle, Error> {
+    pub(crate) fn _spawn(&mut self, pipein: bool, pipeout: bool) -> Result<Handle, Error> {
         use std::process::Stdio;
 
         let mut stdin_config = match pipein {
@@ -80,7 +85,7 @@ impl<I, O> Pipeline<I, O> {
             if remaining || pipeout {
                 command.inner.stdout(Stdio::piped());
             }
-            let mut child = command.inner_spawn()?;
+            let mut child = command._spawn()?;
             if remaining {
                 stdin_config = child.take_stdout().map(Stdio::from);
             }
@@ -96,7 +101,7 @@ impl Pipeline<Inherit, Inherit> {
         self.spawn()?.wait()
     }
 
-    pub fn pipe_stdio(self) -> Pipeline<Piped, Piped> {
+    pub(crate) fn pipe_stdio(self) -> Pipeline<Piped, Piped> {
         Pipeline {
             inner: self.inner,
             input: Piped,
@@ -107,7 +112,7 @@ impl Pipeline<Inherit, Inherit> {
 }
 
 impl<O> Pipeline<Inherit, O> {
-    pub fn pipe_stdin(self) -> Pipeline<Piped, O> {
+    pub(crate) fn pipe_stdin(self) -> Pipeline<Piped, O> {
         Pipeline {
             inner: self.inner,
             input: Piped,
@@ -118,7 +123,7 @@ impl<O> Pipeline<Inherit, O> {
 }
 
 impl<I> Pipeline<I, Inherit> {
-    pub fn pipe_stdout(self) -> Pipeline<I, Piped> {
+    pub(crate) fn pipe_stdout(self) -> Pipeline<I, Piped> {
         Pipeline {
             inner: self.inner,
             input: self.input,
@@ -141,7 +146,7 @@ impl<I, O> Pipe<Command> for Pipeline<I, O> {
 impl Spawn<Handle> for Pipeline<Inherit, Inherit> {
     fn spawn(mut self) -> Result<Handle, Error> {
         echo(self.quiet).put(&self).end();
-        self.inner_spawn(false, false)
+        self._spawn(false, false)
     }
 }
 
@@ -166,7 +171,7 @@ impl WriteReadSpawn for Pipeline<Inherit, Inherit> {
 impl Spawn<Handle> for Pipeline<Piped, Inherit> {
     fn spawn(mut self) -> Result<Handle, Error> {
         echo(self.quiet).sput("─▶|", MAGENTA).put(&self).end();
-        self.inner_spawn(true, false)
+        self._spawn(true, false)
     }
 }
 
@@ -187,7 +192,7 @@ impl WriteReadSpawn for Pipeline<Piped, Inherit> {
 impl Spawn<Handle> for Pipeline<Inherit, Piped> {
     fn spawn(mut self) -> Result<Handle, Error> {
         echo(self.quiet).put(&self).sput("|─▶", MAGENTA).end();
-        self.inner_spawn(false, true)
+        self._spawn(false, true)
     }
 }
 
@@ -212,7 +217,7 @@ impl Spawn<Handle> for Pipeline<Piped, Piped> {
             .put(&self)
             .sput("|─▶", MAGENTA)
             .end();
-        self.inner_spawn(true, true)
+        self._spawn(true, true)
     }
 }
 
@@ -248,7 +253,7 @@ impl<R: std::io::Read + Send + 'static> Spawn<ThreadHandle<()>> for Pipeline<R, 
     fn spawn(mut self) -> Result<ThreadHandle<()>, Error> {
         echo(self.quiet).sput("─▶|", MAGENTA).put(&self).end();
 
-        let mut handle = self.inner_spawn(true, false)?;
+        let mut handle = self._spawn(true, false)?;
 
         let mut reader = self.input;
         let mut writer = handle.take_stdin().unwrap();
@@ -284,7 +289,7 @@ impl<R: std::io::Read + Send + 'static> Spawn<ThreadHandle<()>> for Pipeline<R, 
             .sput("|─▶", MAGENTA)
             .end();
 
-        let mut handle = self.inner_spawn(true, true)?;
+        let mut handle = self._spawn(true, true)?;
 
         let mut reader = self.input;
         let mut writer = handle.take_stdin().unwrap();
@@ -348,7 +353,7 @@ impl<W: std::io::Write + Send + 'static> Spawn<ThreadHandle<W>> for Pipeline<Inh
     fn spawn(mut self) -> Result<ThreadHandle<W>, Error> {
         echo(self.quiet).put(&self).sput("|─▶", MAGENTA).end();
 
-        let mut handle = self.inner_spawn(false, true)?;
+        let mut handle = self._spawn(false, true)?;
 
         let mut reader = handle.take_stdout().unwrap();
         let mut writer = self.output;
@@ -378,7 +383,7 @@ impl<W: std::io::Write + Send + 'static> Spawn<ThreadHandle<W>> for Pipeline<Pip
             .sput("|─▶", MAGENTA)
             .end();
 
-        let mut handle = self.inner_spawn(true, true)?;
+        let mut handle = self._spawn(true, true)?;
 
         let mut reader = handle.take_stdout().unwrap();
         let mut writer = self.output;

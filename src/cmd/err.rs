@@ -1,7 +1,4 @@
-use crate::{style, style::Style};
-
-const BLUE: Style = style().blue();
-const BOLD_YELLOW: Style = style().bold().yellow();
+use crate::style::{BLUE, BOLD_YELLOW};
 
 #[derive(Debug)]
 pub struct Error {

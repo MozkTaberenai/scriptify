@@ -5,6 +5,7 @@ use super::spawn::{ReadSpawn, ReadSpawnExt};
 use super::status::Status;
 use std::io::Read;
 
+/// A handle to a child processes.
 #[derive(Debug, Default)]
 pub struct Handle(pub(crate) Vec<Child>);
 
@@ -21,6 +22,7 @@ impl From<Vec<Child>> for Handle {
 }
 
 impl Handle {
+    /// Waits for all child processes to exit and collects their exit statuses.
     pub fn wait(self) -> Result<Status, Error> {
         let mut status = Vec::with_capacity(self.0.len());
         for child in self.0 {
@@ -72,6 +74,12 @@ where
         Ok(string)
     }
 }
+
+/// A handle to a child processes and IO thread handle.
+///
+/// When a Reader is passed as input to a pipeline or a Writer is passed as output,
+/// threads are internally generated to perform these IO operations.
+/// This struct represents the handle for such threads.
 
 #[derive(Debug)]
 pub struct ThreadHandle<T> {

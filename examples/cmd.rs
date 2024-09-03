@@ -1,5 +1,8 @@
 use scriptant::*;
 
+type AnyError = Box<dyn std::error::Error>;
+type Result<T, E = AnyError> = std::result::Result<T, E>;
+
 fn main() -> Result<()> {
     cmd!("echo", "a").run()?;
     cmd!("echo").args((0..10).map(|n| n.to_string())).run()?;
@@ -8,7 +11,7 @@ fn main() -> Result<()> {
     cmd!("ls", "-alF").current_dir("src").run()?;
 
     if let Err(err) = cmd!("unknown_command", "arg1", "arg2").run() {
-        echo().put(err).end();
+        echo!(err);
     }
 
     cmd!("date")

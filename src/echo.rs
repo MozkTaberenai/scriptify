@@ -1,11 +1,5 @@
 //! Echo module for printing messages to the console.
 
-use crate::style::Style;
-
-pub fn echo() -> Echo {
-    Echo::default()
-}
-
 #[derive(Debug)]
 #[must_use]
 pub enum Echo {
@@ -36,24 +30,37 @@ impl Echo {
         match self {
             Self::Quiet => Self::Quiet,
             Self::Head => {
-                print!("{arg}");
+                eprint!("{arg}");
                 Self::Tail
             }
             Self::Tail => {
-                print!(" {arg}");
+                eprint!(" {arg}");
                 Self::Tail
             }
         }
     }
 
-    pub fn sput(self, arg: impl std::fmt::Display, style: Style) -> Self {
+    pub fn sput(self, arg: impl std::fmt::Display, style: anstyle::Style) -> Self {
         self.put(format_args!("{style}{arg}{style:#}"))
     }
 
     pub fn end(self) {
         match self {
             Self::Quiet => {}
-            _ => println!(),
+            _ => eprintln!(),
         }
     }
+}
+
+/// A macro to print to the standard output
+#[macro_export]
+macro_rules! echo {
+    ($($arg:expr),* $(,)?) => {
+        $crate::Echo::new()
+            $(.put($arg))*
+            .end();
+    };
+    () => {
+        println!();
+    };
 }

@@ -1,5 +1,8 @@
 use scriptant::*;
 
+type AnyError = Box<dyn std::error::Error>;
+type Result<T, E = AnyError> = std::result::Result<T, E>;
+
 fn main() -> Result<()> {
     fs::create_dir("tmp")?;
 

@@ -98,3 +98,5 @@ fn pipe_to_writer() {
     assert!(status.success());
     assert_eq!(&output, b"abcde");
 }
+
+// ToDo: echo tests
