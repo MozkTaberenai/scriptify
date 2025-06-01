@@ -125,22 +125,30 @@ fn run_fmt() -> Result<()> {
 fn run_clippy() -> Result<()> {
     echo!("📎 Running comprehensive clippy checks...");
     let project_root = get_project_root()?;
-    
+
     echo!("  Running clippy for all targets...");
-    cmd!("cargo", "clippy", "--all-targets", "--all-features", "--", "-D", "warnings")
-        .cwd(&project_root)
-        .run()?;
-    
+    cmd!(
+        "cargo",
+        "clippy",
+        "--all-targets",
+        "--all-features",
+        "--",
+        "-D",
+        "warnings"
+    )
+    .cwd(&project_root)
+    .run()?;
+
     echo!("  Running clippy for tests...");
     cmd!("cargo", "clippy", "--tests", "--", "-D", "warnings")
         .cwd(&project_root)
         .run()?;
-    
+
     echo!("  Running clippy for examples...");
     cmd!("cargo", "clippy", "--examples", "--", "-D", "warnings")
         .cwd(&project_root)
         .run()?;
-    
+
     echo!("✅ All clippy checks passed!");
     Ok(())
 }

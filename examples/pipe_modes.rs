@@ -5,7 +5,7 @@
 //! - Stderr-only piping
 //! - Combined stdout+stderr piping
 
-use scriptify::{cmd, PipeMode};
+use scriptify::{PipeMode, cmd};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== Pipe Mode Examples ===\n");
@@ -25,7 +25,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .pipe(cmd!("wc", "-c"))
         .pipe_stderr()
         .output()?;
-    println!("   Error message character count: {}", error_char_count.trim());
+    println!(
+        "   Error message character count: {}",
+        error_char_count.trim()
+    );
     println!();
 
     // Example 3: Both stdout and stderr piping
@@ -53,20 +56,28 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Example 5: Error processing pipeline
     println!("5. Error processing pipeline:");
     println!("   Command: Generate multiple error lines and count them");
-    let error_lines = cmd!("sh", "-c", "echo 'ERROR 1' >&2; echo 'ERROR 2' >&2; echo 'ERROR 3' >&2")
-        .pipe(cmd!("wc", "-l"))
-        .pipe_stderr()
-        .output()?;
+    let error_lines = cmd!(
+        "sh",
+        "-c",
+        "echo 'ERROR 1' >&2; echo 'ERROR 2' >&2; echo 'ERROR 3' >&2"
+    )
+    .pipe(cmd!("wc", "-l"))
+    .pipe_stderr()
+    .output()?;
     println!("   Number of error lines: {}", error_lines.trim());
     println!();
 
     // Example 6: Complex stderr processing
     println!("6. Complex stderr processing:");
     println!("   Command: Filter specific errors from stderr");
-    let filtered_errors = cmd!("sh", "-c", "echo 'INFO: starting' >&2; echo 'ERROR: failed' >&2; echo 'INFO: done' >&2")
-        .pipe(cmd!("grep", "ERROR"))
-        .pipe_stderr()
-        .output()?;
+    let filtered_errors = cmd!(
+        "sh",
+        "-c",
+        "echo 'INFO: starting' >&2; echo 'ERROR: failed' >&2; echo 'INFO: done' >&2"
+    )
+    .pipe(cmd!("grep", "ERROR"))
+    .pipe_stderr()
+    .output()?;
     println!("   Filtered errors: {}", filtered_errors.trim());
 
     Ok(())
