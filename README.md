@@ -34,7 +34,17 @@ Add this to your `Cargo.toml`:
 scriptify = "0.1.0"
 ```
 
+### Platform Support
+
+Currently supported platforms:
+- **Linux** ✅ Full support
+- **macOS** ✅ Full support  
+- **Windows** ⚠️ Limited support
+
+**Note on Windows**: While the core functionality works on Windows, many examples and tests use Unix-specific commands (`ls`, `cat`, `tr`, `sort`, etc.) that are not available in standard Windows environments. Windows support could be improved in future versions with command mapping or by requiring tools like Git Bash or WSL.
+
 ### Basic Usage
+</edits>
 
 #### Command Execution
 
