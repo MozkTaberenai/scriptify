@@ -2,6 +2,16 @@
 
 Thank you for your interest in contributing to scriptify! This document provides comprehensive guidelines for both human and AI contributors.
 
+## ⚠️ CRITICAL: Mandatory Pre-Commit Process
+
+**BEFORE EVERY COMMIT, YOU MUST RUN:**
+
+```bash
+cargo xtask precommit
+```
+
+This command runs comprehensive checks (tests + clippy + formatting). **ALL checks must pass** before committing.
+
 ## Quick Start for Contributors
 
 1. **Fork and clone** the repository
@@ -9,7 +19,7 @@ Thank you for your interest in contributing to scriptify! This document provides
 3. **Run the development setup**:
    ```bash
    cargo test            # Verify everything works
-   cargo xtask precommit # Run pre-commit checks
+   cargo xtask precommit # MANDATORY: Run pre-commit checks
    ```
 
 ## Required Reading
