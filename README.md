@@ -583,15 +583,23 @@ This crate includes comprehensive examples organized by skill level:
 - `simple_fs.rs` - File system operations
 
 #### Intermediate Examples (`examples/02_intermediate/`)
-- `error_handling.rs` - Robust error management
 - `environment.rs` - Environment variables and working directories
-- `complex_pipes.rs` - Advanced pipeline operations
+- `error_handling.rs` - Robust error management
 - `pipe_modes.rs` - Stdout/stderr piping control
+- `mixed_pipe_modes.rs` - Mixed pipeline modes and combinations
+
+#### Advanced Examples (`examples/03_advanced/`)
+- `complex_pipes.rs` - Advanced pipeline operations and patterns
+- `command_quoting.rs` - Argument quoting and escaping for readability
+- `control_char_demo.rs` - Control character handling demonstration
 
 Run any example with:
 ```bash
 cargo run --example hello_world
 cargo run --example simple_commands
+cargo run --example pipe_modes
+cargo run --example command_quoting
+cargo run --example control_char_demo
 # ... etc
 ```
 

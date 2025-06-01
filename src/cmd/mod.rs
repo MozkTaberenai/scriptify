@@ -316,28 +316,89 @@ impl Cmd {
         Ok(output)
     }
 
+    /// Quotes an argument for display if it contains characters that affect readability.
+    ///
+    /// This function focuses on readability rather than shell compatibility:
+    /// - Arguments with spaces or control characters: wrapped in single quotes with escaping
+    /// - Arguments with single quotes: wrapped in double quotes with escaping
+    /// - Empty arguments: displayed as empty quotes
+    /// - Safe arguments: displayed as-is
+    fn quote_argument(arg: &OsStr) -> String {
+        let arg_str = arg.to_string_lossy();
+
+        // If the argument is empty, return empty quotes
+        if arg_str.is_empty() {
+            return "\"\"".to_string();
+        }
+
+        // Check if argument needs quoting (focus on readability)
+        let needs_quoting = arg_str.chars().any(|c| {
+            matches!(
+                c,
+                ' ' | '\t' | '\n' | '\r' | '"' | '\'' | '\0'..='\x1F' | '\x7F'
+            )
+        });
+
+        // Escape control characters for better display
+        let escape_control_chars = |s: &str| -> String {
+            s.chars()
+                .map(|c| match c {
+                    '\t' => "\\t".to_string(),
+                    '\n' => "\\n".to_string(),
+                    '\r' => "\\r".to_string(),
+                    '\0' => "\\0".to_string(),
+                    c if c.is_control() => format!("\\x{:02x}", c as u8),
+                    c => c.to_string(),
+                })
+                .collect()
+        };
+
+        // Handle arguments with single quotes specially
+        if arg_str.contains('\'') {
+            let escaped = arg_str
+                .replace('\\', "\\\\")
+                .replace('"', "\\\"");
+            let escaped = escape_control_chars(&escaped);
+            return format!("\"{}\"", escaped);
+        }
+
+        // If argument needs quoting, use single quotes with control char escaping
+        if needs_quoting {
+            let escaped = escape_control_chars(&arg_str);
+            return format!("'{}'", escaped);
+        }
+
+        // No quoting needed
+        arg_str.to_string()
+    }
+
     fn echo_command(&self) {
         let mut echo = crate::Echo::new();
         echo = echo.sput("cmd", BRIGHT_BLACK);
 
         if let Some(current_dir) = &self.current_dir {
+            let quoted_dir = Self::quote_argument(current_dir.as_os_str());
             echo = echo
                 .sput("cd:", BRIGHT_BLUE)
-                .sput(current_dir.to_string_lossy(), UNDERLINE_BRIGHT_BLUE);
+                .sput(quoted_dir, UNDERLINE_BRIGHT_BLUE);
         }
 
         for (key, val) in &self.envs {
+            let quoted_key = Self::quote_argument(key);
+            let quoted_val = Self::quote_argument(val);
             echo = echo
                 .sput("env:", BRIGHT_BLUE)
-                .sput(key.to_string_lossy(), UNDERLINE_BRIGHT_BLUE)
+                .sput(quoted_key, UNDERLINE_BRIGHT_BLUE)
                 .put("=")
-                .sput(val.to_string_lossy(), UNDERLINE_BRIGHT_BLUE);
+                .sput(quoted_val, UNDERLINE_BRIGHT_BLUE);
         }
 
-        echo = echo.sput(self.program.to_string_lossy(), BOLD_CYAN);
+        let quoted_program = Self::quote_argument(&self.program);
+        echo = echo.sput(quoted_program, BOLD_CYAN);
 
         for arg in &self.args {
-            echo = echo.sput(arg.to_string_lossy(), BOLD_UNDERLINE);
+            let quoted_arg = Self::quote_argument(arg);
+            echo = echo.sput(quoted_arg, BOLD_UNDERLINE);
         }
 
         echo.end();
@@ -585,23 +646,28 @@ impl Pipeline {
             }
 
             if let Some(current_dir) = &cmd.current_dir {
+                let quoted_dir = Cmd::quote_argument(current_dir.as_os_str());
                 echo = echo
                     .sput("cd:", BRIGHT_BLUE)
-                    .sput(current_dir.to_string_lossy(), UNDERLINE_BRIGHT_BLUE);
+                    .sput(quoted_dir, UNDERLINE_BRIGHT_BLUE);
             }
 
             for (key, val) in &cmd.envs {
+                let quoted_key = Cmd::quote_argument(key);
+                let quoted_val = Cmd::quote_argument(val);
                 echo = echo
                     .sput("env:", BRIGHT_BLUE)
-                    .sput(key.to_string_lossy(), UNDERLINE_BRIGHT_BLUE)
+                    .sput(quoted_key, UNDERLINE_BRIGHT_BLUE)
                     .put("=")
-                    .sput(val.to_string_lossy(), UNDERLINE_BRIGHT_BLUE);
+                    .sput(quoted_val, UNDERLINE_BRIGHT_BLUE);
             }
 
-            echo = echo.sput(cmd.program.to_string_lossy(), BOLD_CYAN);
+            let quoted_program = Cmd::quote_argument(&cmd.program);
+            echo = echo.sput(quoted_program, BOLD_CYAN);
 
             for arg in &cmd.args {
-                echo = echo.sput(arg.to_string_lossy(), BOLD_UNDERLINE);
+                let quoted_arg = Cmd::quote_argument(arg);
+                echo = echo.sput(quoted_arg, BOLD_UNDERLINE);
             }
         }
 
