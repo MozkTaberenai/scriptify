@@ -106,8 +106,7 @@ fn test_nonexistent_command() {
 #[test]
 fn test_pipe_stderr() {
     let result = cmd!("sh", "-c", "echo 'error message' >&2")
-        .pipe(cmd!("wc", "-c"))
-        .pipe_stderr()
+        .pipe_stderr(cmd!("wc", "-c"))
         .output()
         .unwrap();
 
@@ -118,8 +117,7 @@ fn test_pipe_stderr() {
 #[test]
 fn test_pipe_both() {
     let result = cmd!("sh", "-c", "echo 'stdout'; echo 'stderr' >&2")
-        .pipe(cmd!("wc", "-l"))
-        .pipe_both()
+        .pipe_both(cmd!("wc", "-l"))
         .output()
         .unwrap();
 

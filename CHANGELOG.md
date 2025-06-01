@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Restructured `src/cmd.rs` into modular `src/cmd/` directory structure
+- Separated test code into dedicated `src/cmd/tests.rs` file for better maintainability
+- Improved code organization and readability by splitting implementation and tests
+
 ### Added
 - Initial release of scriptify
 - `cmd!` macro for easy command execution

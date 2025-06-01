@@ -20,14 +20,17 @@ pub struct Cmd {
 
 /// Specifies which output streams should be piped between commands.
 ///
-/// This enum controls how data flows between commands in a pipeline:
-/// - **Between commands**: Determines which streams are connected
-/// - **Final output**: The last command's stdout is captured unless specified otherwise
+/// This enum is used internally to track pipe modes, but you typically don't need
+/// to use it directly. Instead, use the convenient builder methods on `Cmd`:
+///
+/// - `pipe(cmd)` - pipes stdout (default)
+/// - `pipe_stderr(cmd)` - pipes stderr only
+/// - `pipe_both(cmd)` - pipes both stdout and stderr combined
 ///
 /// # Examples
 ///
 /// ```no_run
-/// use scriptify::{cmd, PipeMode};
+/// use scriptify::cmd;
 ///
 /// // Pipe stdout (default)
 /// let output = cmd!("echo", "hello")
@@ -36,19 +39,23 @@ pub struct Cmd {
 ///
 /// // Pipe stderr between commands
 /// let output = cmd!("command-with-errors")
-///     .pipe(cmd!("grep", "ERROR"))
-///     .pipe_stderr()
+///     .pipe_stderr(cmd!("grep", "ERROR"))
 ///     .output()?;
 ///
 /// // Pipe both stdout and stderr
 /// let output = cmd!("command-with-mixed-output")
-///     .pipe(cmd!("sort"))
-///     .pipe_both()
+///     .pipe_both(cmd!("sort"))
+///     .output()?;
+///
+/// // Mixed pipe modes in one pipeline
+/// let output = cmd!("sh", "-c", "echo 'out'; echo 'err' >&2")
+///     .pipe_stderr(cmd!("process-errors"))
+///     .pipe(cmd!("process-output"))
 ///     .output()?;
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum PipeMode {
+enum PipeMode {
     /// Pipe only stdout between commands (default behavior).
     ///
     /// This is the standard Unix pipe behavior where each command's stdout
@@ -71,10 +78,9 @@ pub enum PipeMode {
 /// A pipeline of commands.
 #[derive(Debug)]
 pub struct Pipeline {
-    commands: Vec<Cmd>,
+    connections: Vec<(Cmd, PipeMode)>,
     input: Option<String>,
     quiet: bool,
-    pipe_mode: PipeMode,
 }
 
 /// Command execution error.
@@ -182,10 +188,59 @@ impl Cmd {
     pub fn pipe(self, next: Cmd) -> Pipeline {
         let quiet = self.quiet;
         Pipeline {
-            commands: vec![self, next],
+            connections: vec![(self, PipeMode::Stdout), (next, PipeMode::Stdout)],
             input: None,
             quiet,
-            pipe_mode: PipeMode::Stdout,
+        }
+    }
+
+    /// Pipe this command's stderr to another command's stdin.
+    ///
+    /// This is a convenience method that creates a pipeline with PipeMode::Stderr,
+    /// allowing you to specify the pipe mode directly in the builder pattern.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use scriptify::cmd;
+    ///
+    /// // Process error messages through a pipeline
+    /// let error_count = cmd!("sh", "-c", "echo 'ERROR: failed' >&2")
+    ///     .pipe_stderr(cmd!("wc", "-l"))
+    ///     .output()?;
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn pipe_stderr(self, next: Cmd) -> Pipeline {
+        let quiet = self.quiet;
+        Pipeline {
+            connections: vec![(self, PipeMode::Stdout), (next, PipeMode::Stderr)],
+            input: None,
+            quiet,
+        }
+    }
+
+    /// Pipe this command's combined stdout and stderr to another command's stdin.
+    ///
+    /// This is a convenience method that creates a pipeline with PipeMode::Both,
+    /// allowing you to specify the pipe mode directly in the builder pattern.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use scriptify::cmd;
+    ///
+    /// // Sort all output (both stdout and stderr)
+    /// let sorted_output = cmd!("sh", "-c", "echo 'out'; echo 'err' >&2")
+    ///     .pipe_both(cmd!("sort"))
+    ///     .output()?;
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn pipe_both(self, next: Cmd) -> Pipeline {
+        let quiet = self.quiet;
+        Pipeline {
+            connections: vec![(self, PipeMode::Stdout), (next, PipeMode::Both)],
+            input: None,
+            quiet,
         }
     }
 
@@ -241,10 +296,19 @@ impl Cmd {
             }
         }
 
-        child.wait_with_output().map_err(|e| Error {
+        let output = child.wait_with_output().map_err(|e| Error {
             message: "Failed to wait for command".to_string(),
             source: Some(e),
-        })
+        })?;
+
+        if !output.status.success() {
+            return Err(Error {
+                message: format!("Command failed with exit code: {:?}", output.status.code()),
+                source: None,
+            });
+        }
+
+        Ok(output)
     }
 
     fn echo_command(&self) {
@@ -278,7 +342,19 @@ impl Cmd {
 impl Pipeline {
     /// Add another command to the pipeline.
     pub fn pipe(mut self, cmd: Cmd) -> Self {
-        self.commands.push(cmd);
+        self.connections.push((cmd, PipeMode::Stdout));
+        self
+    }
+
+    /// Add another command to the pipeline, piping stderr.
+    pub fn pipe_stderr(mut self, cmd: Cmd) -> Self {
+        self.connections.push((cmd, PipeMode::Stderr));
+        self
+    }
+
+    /// Add another command to the pipeline, piping both stdout and stderr.
+    pub fn pipe_both(mut self, cmd: Cmd) -> Self {
+        self.connections.push((cmd, PipeMode::Both));
         self
     }
 
@@ -292,91 +368,6 @@ impl Pipeline {
     pub fn quiet(mut self) -> Self {
         self.quiet = true;
         self
-    }
-
-    /// Set the pipe mode for this pipeline.
-    ///
-    /// This method allows you to specify which output streams should be connected
-    /// between commands in the pipeline.
-    ///
-    /// # Arguments
-    ///
-    /// * `mode` - The pipe mode to use (Stdout, Stderr, or Both)
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// use scriptify::{cmd, PipeMode};
-    ///
-    /// let output = cmd!("generate-data")
-    ///     .pipe(cmd!("process-data"))
-    ///     .pipe_mode(PipeMode::Stderr)
-    ///     .output()?;
-    /// # Ok::<(), Box<dyn std::error::Error>>(())
-    /// ```
-    pub fn pipe_mode(mut self, mode: PipeMode) -> Self {
-        self.pipe_mode = mode;
-        self
-    }
-
-    /// Pipe stderr instead of stdout between commands.
-    ///
-    /// This is a convenience method equivalent to `pipe_mode(PipeMode::Stderr)`.
-    /// Each command's stderr output becomes the next command's stdin input.
-    ///
-    /// # Use Cases
-    ///
-    /// - Error log processing: `error_producer.pipe(grep).pipe_stderr()`
-    /// - Debugging pipelines: Separate error handling from normal data flow
-    /// - Log analysis: Process error streams separately from output streams
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// use scriptify::cmd;
-    ///
-    /// // Process error messages through a pipeline
-    /// let error_count = cmd!("sh", "-c", "echo 'ERROR: failed' >&2")
-    ///     .pipe(cmd!("wc", "-l"))
-    ///     .pipe_stderr()
-    ///     .output()?;
-    /// # Ok::<(), Box<dyn std::error::Error>>(())
-    /// ```
-    pub fn pipe_stderr(self) -> Self {
-        self.pipe_mode(PipeMode::Stderr)
-    }
-
-    /// Pipe both stdout and stderr combined between commands.
-    ///
-    /// This is a convenience method equivalent to `pipe_mode(PipeMode::Both)`.
-    /// Both output streams are merged and sent to the next command's stdin.
-    ///
-    /// # Important Notes
-    ///
-    /// - **Order not guaranteed**: stdout and stderr are merged concurrently
-    /// - **Performance**: May use additional threads for stream merging
-    /// - **Buffering**: Some buffering may occur during the merge process
-    ///
-    /// # Use Cases
-    ///
-    /// - Log aggregation: Combine all output for unified processing
-    /// - Debugging: Capture complete command output for analysis
-    /// - Monitoring: Process all output streams together
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// use scriptify::cmd;
-    ///
-    /// // Sort all output (both stdout and stderr)
-    /// let sorted_output = cmd!("sh", "-c", "echo 'out'; echo 'err' >&2")
-    ///     .pipe(cmd!("sort"))
-    ///     .pipe_both()
-    ///     .output()?;
-    /// # Ok::<(), Box<dyn std::error::Error>>(())
-    /// ```
-    pub fn pipe_both(self) -> Self {
-        self.pipe_mode(PipeMode::Both)
     }
 
     /// Run the pipeline.
@@ -395,13 +386,13 @@ impl Pipeline {
             self.echo_pipeline();
         }
 
-        if self.commands.is_empty() {
+        if self.connections.is_empty() {
             return Ok(Vec::new());
         }
 
         // For single command, use the simpler Cmd execution
-        if self.commands.len() == 1 {
-            let mut cmd = self.commands.into_iter().next().unwrap();
+        if self.connections.len() == 1 {
+            let mut cmd = self.connections.into_iter().next().unwrap().0;
             if let Some(input) = self.input {
                 cmd = cmd.input(input);
             }
@@ -433,19 +424,15 @@ impl Pipeline {
         // Native pipeline implementation using std::io::pipe from Rust 1.87.0
         // This creates anonymous pipes directly in memory, enabling true streaming processing
         //
-        // Supports all PipeMode variants:
-        // - Stdout: Standard pipe between stdout->stdin
-        // - Stderr: Pipe stderr->stdin using dedicated stderr pipes
-        // - Both: Use try_clone() to merge stdout+stderr into single pipe
-        //
-        // This implementation leverages Rust 1.87.0's anonymous pipes with
-        // try_clone() capability for efficient stream merging
+        // Now supports individual PipeMode per connection:
+        // - Each connection between commands can have its own pipe mode
+        // - connections[i].1 specifies how connections[i-1] pipes to connections[i]
 
         let mut children: Vec<Child> = Vec::new();
         let mut prev_reader: Option<std::io::PipeReader> = None;
 
         // Spawn all commands in the pipeline, connecting them with pipes
-        for (i, cmd_def) in self.commands.iter().enumerate() {
+        for (i, (cmd_def, _pipe_mode)) in self.connections.iter().enumerate() {
             let mut cmd = Self::build_std_command_static(cmd_def);
 
             // Set up stdin
@@ -461,41 +448,17 @@ impl Pipeline {
                 }
             }
 
-            // Set up stdout and stderr based on pipe mode
-            let is_last = i == self.commands.len() - 1;
+            // Set up stdout and stderr based on this connection's pipe mode
+            let is_last = i == self.connections.len() - 1;
             if is_last {
                 // Last command: capture output if requested
-                match self.pipe_mode {
-                    PipeMode::Stdout => {
-                        if capture_output {
-                            cmd.stdout(Stdio::piped());
-                        }
-                    }
-                    PipeMode::Stderr => {
-                        if capture_output {
-                            cmd.stdout(Stdio::piped());
-                        }
-                    }
-                    PipeMode::Both => {
-                        if capture_output {
-                            // For combined mode, capture both streams to the same pipe
-                            let (reader, writer) = std::io::pipe().map_err(|e| Error {
-                                message: "Failed to create pipe for combined output".to_string(),
-                                source: Some(e),
-                            })?;
-                            let writer_clone = writer.try_clone().map_err(|e| Error {
-                                message: "Failed to clone pipe writer".to_string(),
-                                source: Some(e),
-                            })?;
-                            cmd.stdout(Stdio::from(writer));
-                            cmd.stderr(Stdio::from(writer_clone));
-                            prev_reader = Some(reader);
-                        }
-                    }
+                if capture_output {
+                    cmd.stdout(Stdio::piped());
                 }
             } else {
-                // Intermediate commands: create anonymous pipe for next command
-                match self.pipe_mode {
+                // Get the next command's pipe mode to determine how to pipe
+                let next_pipe_mode = self.connections[i + 1].1;
+                match next_pipe_mode {
                     PipeMode::Stdout => {
                         let (reader, writer) = std::io::pipe().map_err(|e| Error {
                             message: "Failed to create stdout pipe".to_string(),
@@ -555,38 +518,13 @@ impl Pipeline {
         // Collect output from the last command if needed
         let mut result = Vec::new();
         if capture_output {
-            match self.pipe_mode {
-                PipeMode::Stdout => {
-                    if let Some(last_child) = children.last_mut() {
-                        if let Some(stdout) = last_child.stdout.take() {
-                            let mut reader = BufReader::new(stdout);
-                            reader.read_to_end(&mut result).map_err(|e| Error {
-                                message: "Failed to read stdout".to_string(),
-                                source: Some(e),
-                            })?;
-                        }
-                    }
-                }
-                PipeMode::Stderr => {
-                    if let Some(last_child) = children.last_mut() {
-                        if let Some(stdout) = last_child.stdout.take() {
-                            let mut reader = BufReader::new(stdout);
-                            reader.read_to_end(&mut result).map_err(|e| Error {
-                                message: "Failed to read stdout from final command".to_string(),
-                                source: Some(e),
-                            })?;
-                        }
-                    }
-                }
-                PipeMode::Both => {
-                    // For combined mode, read from the shared pipe reader
-                    if let Some(reader) = prev_reader.take() {
-                        let mut buf_reader = BufReader::new(reader);
-                        buf_reader.read_to_end(&mut result).map_err(|e| Error {
-                            message: "Failed to read combined output".to_string(),
-                            source: Some(e),
-                        })?;
-                    }
+            if let Some(last_child) = children.last_mut() {
+                if let Some(stdout) = last_child.stdout.take() {
+                    let mut reader = BufReader::new(stdout);
+                    reader.read_to_end(&mut result).map_err(|e| Error {
+                        message: "Failed to read stdout".to_string(),
+                        source: Some(e),
+                    })?;
                 }
             }
         }
@@ -628,9 +566,14 @@ impl Pipeline {
         let mut echo = crate::Echo::new();
         echo = echo.sput("cmd", BRIGHT_BLACK);
 
-        for (i, cmd) in self.commands.iter().enumerate() {
+        for (i, (cmd, pipe_mode)) in self.connections.iter().enumerate() {
             if i > 0 {
-                echo = echo.sput("|", MAGENTA);
+                let pipe_symbol = match pipe_mode {
+                    PipeMode::Stdout => "|",
+                    PipeMode::Stderr => "|&",
+                    PipeMode::Both => "|&&",
+                };
+                echo = echo.sput(pipe_symbol, MAGENTA);
             }
 
             if let Some(cwd) = &cmd.cwd {
@@ -670,187 +613,5 @@ macro_rules! cmd {
 }
 
 #[cfg(test)]
-mod cmd_tests {
-    use super::*;
-
-    #[test]
-    fn test_cmd_new() {
-        let cmd = Cmd::new("echo");
-        assert_eq!(cmd.program, "echo");
-        assert!(cmd.args.is_empty());
-        assert!(!cmd.quiet);
-    }
-
-    #[test]
-    fn test_cmd_with_args() {
-        let cmd = cmd!("echo", "hello", "world");
-        assert_eq!(cmd.program, "echo");
-        assert_eq!(cmd.args, vec!["hello", "world"]);
-    }
-
-    #[test]
-    fn test_cmd_builder() {
-        let cmd = Cmd::new("ls")
-            .arg("-la")
-            .env("TEST", "value")
-            .cwd("/tmp")
-            .quiet();
-
-        assert_eq!(cmd.program, "ls");
-        assert_eq!(cmd.args, vec!["-la"]);
-        assert_eq!(cmd.envs, vec![("TEST".to_string(), "value".to_string())]);
-        assert_eq!(cmd.cwd, Some("/tmp".to_string()));
-        assert!(cmd.quiet);
-    }
-
-    #[test]
-    fn test_cmd_output() {
-        let output = cmd!("echo", "test").quiet().output().unwrap();
-        assert_eq!(output.trim(), "test");
-    }
-
-    #[test]
-    fn test_cmd_with_input() {
-        let output = cmd!("cat").input("hello world").quiet().output().unwrap();
-        assert_eq!(output.trim(), "hello world");
-    }
-
-    #[test]
-    fn test_pipeline() {
-        let output = cmd!("echo", "hello")
-            .pipe(cmd!("tr", "[:lower:]", "[:upper:]"))
-            .quiet()
-            .output()
-            .unwrap();
-        assert_eq!(output.trim(), "HELLO");
-    }
-
-    #[test]
-    fn test_pipeline_with_input() {
-        let output = cmd!("tr", "[:lower:]", "[:upper:]")
-            .input("hello world")
-            .quiet()
-            .output()
-            .unwrap();
-        assert_eq!(output.trim(), "HELLO WORLD");
-    }
-
-    #[test]
-    fn test_environment_variable() {
-        // Test that environment variables are properly set for the process
-        let output = cmd!("printenv", "TEST_VAR")
-            .env("TEST_VAR", "test_value")
-            .quiet()
-            .output()
-            .unwrap();
-        assert_eq!(output.trim(), "test_value");
-    }
-
-    #[test]
-    fn test_error_handling() {
-        let result = cmd!("nonexistent_command_12345").quiet().run();
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_quiet_mode() {
-        // This test mainly checks that quiet mode doesn't crash
-        let result = cmd!("echo", "test").quiet().run();
-        assert!(result.is_ok());
-    }
-
-    #[test]
-    fn test_multiple_pipes() {
-        let output = cmd!("echo", "hello world")
-            .pipe(cmd!("tr", "[:lower:]", "[:upper:]"))
-            .pipe(cmd!("rev"))
-            .quiet()
-            .output()
-            .unwrap();
-        assert_eq!(output.trim(), "DLROW OLLEH");
-    }
-
-    #[test]
-    fn test_pipe_stderr() {
-        // Test piping stderr to next command
-        // First command generates stderr, second command should receive it
-        let output = cmd!("sh", "-c", "echo 'error message' >&2")
-            .pipe(cmd!("wc", "-c"))
-            .pipe_stderr()
-            .quiet()
-            .output()
-            .unwrap();
-
-        // Should count characters in the stderr message (13 chars + newline = 14)
-        assert_eq!(output.trim(), "14");
-    }
-
-    #[test]
-    fn test_pipe_both() {
-        // Test piping both stdout and stderr
-        let output = cmd!("sh", "-c", "echo 'stdout' && echo 'stderr' >&2")
-            .pipe(cmd!("sort"))
-            .pipe_both()
-            .quiet()
-            .output()
-            .unwrap();
-
-        // Should contain both outputs (order may vary due to threading)
-        let output_str = output.trim();
-        assert!(output_str.contains("stdout"));
-        assert!(output_str.contains("stderr"));
-    }
-
-    #[test]
-    fn test_pipe_mode_explicit() {
-        // Test setting pipe mode explicitly
-        let output = cmd!("echo", "test")
-            .pipe(cmd!("cat"))
-            .pipe_mode(PipeMode::Stdout)
-            .quiet()
-            .output()
-            .unwrap();
-
-        assert_eq!(output.trim(), "test");
-    }
-
-    #[test]
-    fn test_default_pipe_mode() {
-        // Test that default pipe mode is Stdout
-        let pipeline = cmd!("echo", "test").pipe(cmd!("cat"));
-        assert_eq!(pipeline.pipe_mode, PipeMode::Stdout);
-    }
-
-    #[test]
-    fn test_native_pipeline_for_all_modes() {
-        // Test that all pipe modes work with native pipeline implementation
-        // This test ensures try_native_pipeline supports all modes instead of falling back
-
-        // Test stdout mode (should use native pipeline)
-        let stdout_result = cmd!("echo", "native test")
-            .pipe(cmd!("cat"))
-            .pipe_mode(PipeMode::Stdout)
-            .quiet()
-            .output()
-            .unwrap();
-        assert_eq!(stdout_result.trim(), "native test");
-
-        // Test stderr mode (uses native pipeline with try_clone)
-        let stderr_result = cmd!("sh", "-c", "echo 'native error' >&2")
-            .pipe(cmd!("wc", "-c"))
-            .pipe_mode(PipeMode::Stderr)
-            .quiet()
-            .output()
-            .unwrap();
-        assert_eq!(stderr_result.trim(), "13");
-
-        // Test both mode (uses native pipeline with try_clone)
-        let both_result = cmd!("sh", "-c", "echo 'out'; echo 'err' >&2")
-            .pipe(cmd!("wc", "-l"))
-            .pipe_mode(PipeMode::Both)
-            .quiet()
-            .output()
-            .unwrap();
-        assert_eq!(both_result.trim(), "2");
-    }
-}
+#[path = "tests.rs"]
+mod tests;

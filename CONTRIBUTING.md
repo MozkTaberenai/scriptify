@@ -22,9 +22,15 @@ Thank you for your interest in contributing to scriptify! This document provides
 ### 2. Codebase Structure
 ```
 scriptify/
-├── src/lib.rs              # Main documentation (README source)
-├── src/cmd.rs              # Command execution functionality
-├── src/echo.rs             # Output formatting
+├── src/
+│   ├── lib.rs              # Main documentation (README source)
+│   ├── cmd/                # Command execution functionality
+│   │   ├── mod.rs          # Core implementation
+│   │   └── tests.rs        # Test suite
+│   ├── echo.rs             # Output formatting
+│   ├── fs.rs               # File system operations
+│   ├── color.rs            # Color definitions (internal)
+│   └── style.rs            # Style definitions (internal)
 ├── examples/               # Usage examples
 └── xtask/                  # Development task runner
 ```
@@ -228,7 +234,7 @@ When adding examples, use commands available on Unix systems.
 ### Add New Feature
 ```bash
 git checkout -b feature/new-command-feature
-# Modify src/cmd.rs, add tests, update src/lib.rs docs
+# Modify src/cmd/mod.rs, add tests to src/cmd/tests.rs, update src/lib.rs docs
 # Run pre-commit checks, commit, push, create PR
 ```
 
@@ -242,7 +248,7 @@ git checkout -b docs/add-example
 ### Fix Performance
 ```bash
 git checkout -b refactor/improve-performance
-# Focus on pipeline implementation in src/cmd.rs
+# Focus on pipeline implementation in src/cmd/mod.rs
 # Run pre-commit checks, commit, push, create PR
 ```
 
@@ -263,7 +269,7 @@ git checkout -b fix/clippy-warnings
 ## Recent Important Changes
 
 - Implemented efficient native pipelines using `std::io::pipe` (Rust 1.87.0+)
-- Consolidated `src/cmd/` module structure to single `src/cmd.rs` file
+- Restructured cmd module into `src/cmd/` directory with separate test file
 - Added automatic fallback for shell-based pipes on older Rust versions
 - Simplified xtask to focus on project-specific tasks only
 
