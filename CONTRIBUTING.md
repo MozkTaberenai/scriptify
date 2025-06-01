@@ -70,6 +70,10 @@ When adding examples, use commands available on Unix systems.
 4. **Write descriptive commit messages**
 5. **Submit a pull request**
 
+## AI Agent Instructions
+
+**For AI Agents**: Before starting work on this repository, please read `.ai-instructions.md` for specific onboarding instructions and development guidelines.
+
 ## Getting Help
 
 - Check `docs/DEVELOPMENT.md` for detailed workflows
