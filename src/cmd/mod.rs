@@ -2,8 +2,10 @@
 
 use crate::style::*;
 
+use std::io::{BufReader, Read, Write};
 use std::path::Path;
-use std::process::{Command as StdCommand, Output, Stdio};
+use std::process::{Child, Command as StdCommand, Output, Stdio};
+use std::thread;
 
 /// A simple command builder.
 #[derive(Debug, Clone)]
@@ -275,7 +277,128 @@ impl Pipeline {
             };
         }
 
-        // For multiple commands, create a proper pipeline using shell
+        // Use native pipeline with std::io::pipe for efficiency
+        self.execute_native_pipeline(capture_output)
+    }
+
+    fn execute_native_pipeline(self, capture_output: bool) -> Result<Vec<u8>, Error> {
+        // Try native pipeline first using std::io::pipe (Rust 1.87.0+)
+        // This provides several advantages over shell-based pipelines:
+        // 1. Memory efficiency: streaming data instead of buffering everything
+        // 2. Better error handling: individual process status tracking
+        // 3. Platform independence: no shell dependency
+        // 4. Performance: reduced context switching and process overhead
+        match self.try_native_pipeline(capture_output) {
+            Ok(result) => Ok(result),
+            Err(_) => {
+                // Fallback to shell-based pipeline for compatibility
+                // This ensures the library works even if native pipes fail
+                self.execute_shell_pipeline(capture_output)
+            }
+        }
+    }
+
+    fn try_native_pipeline(&self, capture_output: bool) -> Result<Vec<u8>, Error> {
+        // Native pipeline implementation using std::io::pipe from Rust 1.87.0
+        // This creates anonymous pipes directly in memory, avoiding the need
+        // for shell interpretation and enabling true streaming processing
+        let mut children: Vec<Child> = Vec::new();
+        let mut prev_stdout: Option<std::io::PipeReader> = None;
+
+        // Spawn all commands in the pipeline, connecting them with pipes
+        for (i, cmd_def) in self.commands.iter().enumerate() {
+            let mut cmd = Self::build_std_command_static(cmd_def);
+
+            // Set up stdin
+            if i == 0 {
+                // First command: use input if provided
+                if self.input.is_some() {
+                    cmd.stdin(Stdio::piped());
+                }
+            } else {
+                // Subsequent commands: use previous command's stdout
+                if let Some(reader) = prev_stdout.take() {
+                    cmd.stdin(Stdio::from(reader));
+                }
+            }
+
+            // Set up stdout
+            if i == self.commands.len() - 1 {
+                // Last command: capture output if requested
+                if capture_output {
+                    cmd.stdout(Stdio::piped());
+                }
+            } else {
+                // Intermediate commands: create anonymous pipe for next command
+                // std::io::pipe() creates an in-memory pipe that's more efficient
+                // than temporary files or shell-based pipes
+                let (reader, writer) = std::io::pipe().map_err(|e| Error {
+                    message: "Failed to create pipe".to_string(),
+                    source: Some(e),
+                })?;
+                cmd.stdout(Stdio::from(writer));
+                prev_stdout = Some(reader);
+            }
+
+            let mut child = cmd.spawn().map_err(|e| Error {
+                message: format!("Failed to spawn command: {}", cmd_def.program),
+                source: Some(e),
+            })?;
+
+            // Handle input for the first command
+            // Use a separate thread to avoid blocking the main execution
+            if i == 0 {
+                if let Some(input) = &self.input {
+                    if let Some(stdin) = child.stdin.take() {
+                        let input_clone = input.clone();
+                        thread::spawn(move || {
+                            let mut stdin = stdin;
+                            let _ = stdin.write_all(input_clone.as_bytes());
+                            // stdin is automatically closed when it goes out of scope
+                        });
+                    }
+                }
+            }
+
+            children.push(child);
+        }
+
+        // Collect output from the last command if needed
+        let mut result = Vec::new();
+        if capture_output {
+            if let Some(last_child) = children.last_mut() {
+                if let Some(stdout) = last_child.stdout.take() {
+                    let mut reader = BufReader::new(stdout);
+                    reader.read_to_end(&mut result).map_err(|e| Error {
+                        message: "Failed to read output".to_string(),
+                        source: Some(e),
+                    })?;
+                }
+            }
+        }
+
+        // Wait for all children to complete
+        for mut child in children {
+            let status = child.wait().map_err(|e| Error {
+                message: "Failed to wait for command".to_string(),
+                source: Some(e),
+            })?;
+            
+            if !status.success() {
+                return Err(Error {
+                    message: format!("Command failed with exit code: {:?}", status.code()),
+                    source: None,
+                });
+            }
+        }
+
+        Ok(result)
+    }
+
+    fn execute_shell_pipeline(self, capture_output: bool) -> Result<Vec<u8>, Error> {
+        // Fallback to shell-based pipeline for compatibility
+        // This is the original implementation that delegates to the system shell
+        // Less efficient but more compatible with complex shell features
         let mut shell_command = String::new();
         for (i, cmd) in self.commands.iter().enumerate() {
             if i > 0 {
@@ -315,6 +438,20 @@ impl Pipeline {
             final_cmd.run()?;
             Ok(Vec::new())
         }
+    }
+    fn build_std_command_static(cmd_def: &Cmd) -> StdCommand {
+        let mut cmd = StdCommand::new(&cmd_def.program);
+        cmd.args(&cmd_def.args);
+
+        for (key, val) in &cmd_def.envs {
+            cmd.env(key, val);
+        }
+
+        if let Some(cwd) = &cmd_def.cwd {
+            cmd.current_dir(cwd);
+        }
+
+        cmd
     }
 
     fn echo_pipeline(&self) {

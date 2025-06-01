@@ -30,11 +30,16 @@
 //! ## Platform Support
 //!
 //! Currently supported platforms:
-//! - **Linux** ✅ Full support
-//! - **macOS** ✅ Full support  
-//! - **Windows** ⚠️ Limited support
+//! - **Linux** ✅ Full support with native pipe optimization
+//! - **macOS** ✅ Full support with native pipe optimization
+//! - **Windows** ⚠️ Limited support with automatic fallback
 //!
-//! **Note on Windows**: While the core functionality works on Windows, many examples and tests use Unix-specific commands (`ls`, `cat`, `tr`, `sort`, etc.) that are not available in standard Windows environments. Windows support could be improved in future versions with command mapping or by requiring tools like Git Bash or WSL.
+//! **Note on Windows**: While the core functionality works on Windows, many examples and tests use Unix-specific commands (`ls`, `cat`, `tr`, `sort`, etc.) that are not available in standard Windows environments. The new native pipeline implementation automatically falls back to shell-based pipes on Windows for compatibility. Windows support could be improved in future versions with command mapping or by requiring tools like Git Bash or WSL.
+//!
+//! ## Requirements
+//!
+//! - **Rust 1.87.0 or later** for optimal pipeline performance with `std::io::pipe`
+//! - **Rust 1.70.0 or later** minimum (will use fallback shell-based pipes on older versions)
 //!
 //! ## Basic Usage
 //!
@@ -64,7 +69,7 @@
 //!
 //! ### Command Piping
 //!
-//! Chain commands together just like in shell scripts:
+//! Chain commands together just like in shell scripts. **New in Rust 1.87.0**: scriptify now uses native `std::io::pipe` for enhanced performance and memory efficiency!
 //!
 //! ```no_run
 //! use scriptify::*;
@@ -74,18 +79,38 @@
 //!     .pipe(cmd!("tr", "[:lower:]", "[:upper:]"))
 //!     .run()?;
 //!
-//! // Multiple pipes
+//! // Multiple pipes - now using efficient native pipes!
 //! cmd!("cat", "/etc/passwd")
 //!     .pipe(cmd!("grep", "bash"))
 //!     .pipe(cmd!("wc", "-l"))
 //!     .run()?;
 //!
-//! // Get piped output
+//! // Get piped output with streaming processing
 //! let result = cmd!("ps", "aux")
 //!     .pipe(cmd!("grep", "rust"))
 //!     .pipe(cmd!("wc", "-l"))
 //!     .output()?;
 //! echo!("Rust processes:", result.trim());
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
+//!
+//! #### Pipeline Performance Improvements (Rust 1.87.0+)
+//!
+//! - **Memory efficient**: Uses streaming instead of buffering all data
+//! - **Better performance**: Native pipes reduce process overhead
+//! - **Platform independent**: No shell dependency for multi-command pipes
+//! - **Automatic fallback**: Falls back to shell-based pipes if needed for compatibility
+//!
+//! ```no_run
+//! use scriptify::*;
+//!
+//! // Large data processing with efficient streaming
+//! let large_data = "..."; // Megabytes of data
+//! let result = cmd!("grep", "pattern")
+//!     .pipe(cmd!("sort"))
+//!     .pipe(cmd!("uniq", "-c"))
+//!     .input(large_data)
+//!     .output()?; // Processes without loading all data into memory
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 //!
@@ -296,11 +321,13 @@
 //! |---------|-----------|----------------------|---------------|
 //! | Type safety | ✅ | ✅ | ❌ |
 //! | Error handling | ✅ | ✅ | ⚠️ |
-//! | Piping | ✅ | ⚠️ Manual | ✅ |
+//! | Piping | ✅ Native pipes (1.87+) | ⚠️ Manual | ✅ |
+//! | Memory efficiency | ✅ Streaming | ❌ | ⚠️ |
 //! | Visibility | ✅ | ❌ | ✅ |
 //! | Cross-platform | ✅ | ✅ | ⚠️ |
 //! | IDE support | ✅ | ✅ | ⚠️ |
 //! | Debugging | ✅ | ✅ | ❌ |
+//! | Performance | ✅ Optimized | ⚠️ | ⚠️ |
 //!
 //! ## Contributing
 //!

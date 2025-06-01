@@ -23,6 +23,8 @@ cargo-readme = "3.3.1"
 name = "cmd"
 [[example]]
 name = "fs"
+[[example]]
+name = "pipeline_performance"
 
 
 

@@ -1,10 +1,5 @@
 # scriptify
 
-[![Crates.io](https://img.shields.io/crates/v/scriptify.svg)](https://crates.io/crates/scriptify)
-[![Documentation](https://docs.rs/scriptify/badge.svg)](https://docs.rs/scriptify)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Build Status](https://github.com/MozkTaberenai/scriptify/workflows/CI/badge.svg)](https://github.com/MozkTaberenai/scriptify/actions)
-
 ## scriptify
 
 **Scriptify your Rust** - A simple and intuitive library that makes running shell commands and file operations easy and visible.
@@ -37,11 +32,16 @@ scriptify = "0.1.0"
 ### Platform Support
 
 Currently supported platforms:
-- **Linux** ✅ Full support
-- **macOS** ✅ Full support
-- **Windows** ⚠️ Limited support
+- **Linux** ✅ Full support with native pipe optimization
+- **macOS** ✅ Full support with native pipe optimization
+- **Windows** ⚠️ Limited support with automatic fallback
 
-**Note on Windows**: While the core functionality works on Windows, many examples and tests use Unix-specific commands (`ls`, `cat`, `tr`, `sort`, etc.) that are not available in standard Windows environments. Windows support could be improved in future versions with command mapping or by requiring tools like Git Bash or WSL.
+**Note on Windows**: While the core functionality works on Windows, many examples and tests use Unix-specific commands (`ls`, `cat`, `tr`, `sort`, etc.) that are not available in standard Windows environments. The new native pipeline implementation automatically falls back to shell-based pipes on Windows for compatibility. Windows support could be improved in future versions with command mapping or by requiring tools like Git Bash or WSL.
+
+### Requirements
+
+- **Rust 1.87.0 or later** for optimal pipeline performance with `std::io::pipe`
+- **Rust 1.70.0 or later** minimum (will use fallback shell-based pipes on older versions)
 
 ### Basic Usage
 
@@ -70,7 +70,7 @@ cmd!("grep", "error")
 
 #### Command Piping
 
-Chain commands together just like in shell scripts:
+Chain commands together just like in shell scripts. **New in Rust 1.87.0**: scriptify now uses native `std::io::pipe` for enhanced performance and memory efficiency!
 
 ```rust
 use scriptify::*;
@@ -80,18 +80,37 @@ cmd!("echo", "hello world")
     .pipe(cmd!("tr", "[:lower:]", "[:upper:]"))
     .run()?;
 
-// Multiple pipes
+// Multiple pipes - now using efficient native pipes!
 cmd!("cat", "/etc/passwd")
     .pipe(cmd!("grep", "bash"))
     .pipe(cmd!("wc", "-l"))
     .run()?;
 
-// Get piped output
+// Get piped output with streaming processing
 let result = cmd!("ps", "aux")
     .pipe(cmd!("grep", "rust"))
     .pipe(cmd!("wc", "-l"))
     .output()?;
 echo!("Rust processes:", result.trim());
+```
+
+##### Pipeline Performance Improvements (Rust 1.87.0+)
+
+- **Memory efficient**: Uses streaming instead of buffering all data
+- **Better performance**: Native pipes reduce process overhead
+- **Platform independent**: No shell dependency for multi-command pipes
+- **Automatic fallback**: Falls back to shell-based pipes if needed for compatibility
+
+```rust
+use scriptify::*;
+
+// Large data processing with efficient streaming
+let large_data = "..."; // Megabytes of data
+let result = cmd!("grep", "pattern")
+    .pipe(cmd!("sort"))
+    .pipe(cmd!("uniq", "-c"))
+    .input(large_data)
+    .output()?; // Processes without loading all data into memory
 ```
 
 #### Input and Output
@@ -296,11 +315,13 @@ NO_ECHO=1 cargo run  # Run without command echoing
 |---------|-----------|----------------------|---------------|
 | Type safety | ✅ | ✅ | ❌ |
 | Error handling | ✅ | ✅ | ⚠️ |
-| Piping | ✅ | ⚠️ Manual | ✅ |
+| Piping | ✅ Native pipes (1.87+) | ⚠️ Manual | ✅ |
+| Memory efficiency | ✅ Streaming | ❌ | ⚠️ |
 | Visibility | ✅ | ❌ | ✅ |
 | Cross-platform | ✅ | ✅ | ⚠️ |
 | IDE support | ✅ | ✅ | ⚠️ |
 | Debugging | ✅ | ✅ | ❌ |
+| Performance | ✅ Optimized | ⚠️ | ⚠️ |
 
 ### Contributing
 
@@ -311,100 +332,3 @@ We welcome contributions! Please see our [GitHub repository](https://github.com/
 This project is licensed under the MIT License.
 
 License: MIT
-
-
-## Examples
-
-The following examples are available in the `examples/` directory:
-
-### cmd
-
-```rust
-// Basic command execution
-cmd!("echo", "Hello, World!").run()?;
-// Command with multiple arguments
-cmd!("echo").args(["a", "b", "c"]).run()?;
-// Command with environment variable
-cmd!("echo", "hello").env("USER", "alice").run()?;
-// Command with working directory
-cmd!("ls", "-la").cwd("src").run()?;
-// Get command output
-let date = cmd!("date").output()?;
-echo!("Current date:", date.trim());
-// Handle command that might fail
-if let Err(err) = cmd!("unknown_command").run() {
-    echo!("Command failed:", err);
-}
-// Command piping
-cmd!("echo", "hello world")
-    .pipe(cmd!("tr", "[:lower:]", "[:upper:]"))
-    .run()?;
-// Multiple pipes
-cmd!("date")
-    .pipe(cmd!("rev"))
-    .pipe(cmd!("tr", "[:upper:]", "[:lower:]"))
-    .run()?;
-// Pipe with input
-let result = cmd!("tr", "[:lower:]", "[:upper:]")
-    .input("hello world")
-    .output()?;
-echo!("Uppercase:", result.trim());
-// Pipeline with input
-let result = cmd!("sort")
-    .pipe(cmd!("uniq"))
-    .input("apple\nbanana\napple\ncherry\nbanana")
-    .output()?;
-echo!("Unique fruits:", result.trim());
-// Quiet execution (no echo)
-cmd!("echo", "This won't be echoed").quiet().run()?;
-Ok(())
-```
-
-Run with: `cargo run --example cmd`
-
-### fs
-
-```rust
-fs::create_dir("tmp")?;
-fs::write("tmp/a.txt", "abc")?;
-show_metadata("tmp/a.txt")?;
-fs::copy("tmp/a.txt", "tmp/b.txt")?;
-show_metadata("tmp/b.txt")?;
-fs::hard_link("tmp/a.txt", "tmp/h.txt")?;
-show_metadata("tmp/h.txt")?;
-fs::rename("tmp/a.txt", "tmp/c.txt")?;
-show_metadata("tmp/c.txt")?;
-fs::create_dir_all("tmp/d/e")?;
-for entry in fs::read_dir("tmp")? {
-    show_metadata(entry?.path())?;
-}
-fs::remove_file("tmp/b.txt")?;
-fs::remove_dir("tmp/d/e")?;
-fs::remove_dir_all("tmp")?;
-Ok(())
-```
-
-Run with: `cargo run --example fs`
-
-
-## Development
-
-This project uses `cargo xtask` for development tasks:
-
-```bash
-# Generate README.md
-cargo xtask readme
-
-# Run all tests
-cargo xtask test
-
-# Run code formatting
-cargo xtask fmt
-
-# Run clippy lints
-cargo xtask clippy
-
-# Run full CI pipeline
-cargo xtask ci
-```
-

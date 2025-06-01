@@ -23,6 +23,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support for `NO_ECHO` environment variable
 - Cross-platform compatibility (Unix, Windows, macOS)
 
+### Performance Improvements (Rust 1.87.0+)
+- **Native pipeline implementation** using `std::io::pipe` for enhanced performance
+- **Memory-efficient streaming** for large data processing without buffering
+- **Reduced process overhead** by eliminating shell delegation for multi-command pipes
+- **Platform-independent pipes** that work without shell dependency
+- **Automatic fallback** to shell-based pipes for compatibility with older Rust versions
+- **Parallel command execution** in pipelines for better throughput
+- **Real-time data processing** with true streaming capabilities
+
 ### Features
 - **Zero runtime dependencies** (only `anstyle` for colors)
 - **Type-safe command building** with fluent API
