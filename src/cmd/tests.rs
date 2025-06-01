@@ -14,7 +14,10 @@ fn test_cmd_new() {
 fn test_cmd_with_args() {
     let cmd = cmd!("echo", "hello", "world");
     assert_eq!(cmd.program, OsString::from("echo"));
-    assert_eq!(cmd.args, vec![OsString::from("hello"), OsString::from("world")]);
+    assert_eq!(
+        cmd.args,
+        vec![OsString::from("hello"), OsString::from("world")]
+    );
 }
 
 #[test]
@@ -27,7 +30,10 @@ fn test_cmd_builder() {
 
     assert_eq!(cmd.program, OsString::from("ls"));
     assert_eq!(cmd.args, vec![OsString::from("-la")]);
-    assert_eq!(cmd.envs, vec![(OsString::from("TEST"), OsString::from("value"))]);
+    assert_eq!(
+        cmd.envs,
+        vec![(OsString::from("TEST"), OsString::from("value"))]
+    );
     assert_eq!(cmd.cwd, Some(PathBuf::from("/tmp")));
     assert!(cmd.quiet);
 }
@@ -291,12 +297,18 @@ fn test_cmd_parse() {
     // Test basic parsing
     let cmd = Cmd::parse("echo hello world");
     assert_eq!(cmd.program, OsString::from("echo"));
-    assert_eq!(cmd.args, vec![OsString::from("hello"), OsString::from("world")]);
+    assert_eq!(
+        cmd.args,
+        vec![OsString::from("hello"), OsString::from("world")]
+    );
 
     // Test parsing with multiple spaces
     let cmd = Cmd::parse("ls  -la   /tmp");
     assert_eq!(cmd.program, OsString::from("ls"));
-    assert_eq!(cmd.args, vec![OsString::from("-la"), OsString::from("/tmp")]);
+    assert_eq!(
+        cmd.args,
+        vec![OsString::from("-la"), OsString::from("/tmp")]
+    );
 
     // Test empty string
     let cmd = Cmd::parse("");
@@ -374,7 +386,14 @@ fn test_multiple_environment_variables() {
 fn test_args_method() {
     // Test adding multiple arguments at once
     let cmd = Cmd::new("ls").args(vec!["-l", "-a", "-h"]);
-    assert_eq!(cmd.args, vec![OsString::from("-l"), OsString::from("-a"), OsString::from("-h")]);
+    assert_eq!(
+        cmd.args,
+        vec![
+            OsString::from("-l"),
+            OsString::from("-a"),
+            OsString::from("-h")
+        ]
+    );
 
     // Test with empty iterator
     let cmd = Cmd::new("echo").args(Vec::<&str>::new());
@@ -578,10 +597,23 @@ fn test_builder_pattern_completeness() {
         .quiet();
 
     assert_eq!(cmd.program, OsString::from("test_program"));
-    assert_eq!(cmd.args, vec![OsString::from("arg1"), OsString::from("arg2"), OsString::from("arg3")]);
+    assert_eq!(
+        cmd.args,
+        vec![
+            OsString::from("arg1"),
+            OsString::from("arg2"),
+            OsString::from("arg3")
+        ]
+    );
     assert_eq!(cmd.envs.len(), 2);
-    assert_eq!(cmd.envs[0], (OsString::from("VAR1"), OsString::from("value1")));
-    assert_eq!(cmd.envs[1], (OsString::from("VAR2"), OsString::from("value2")));
+    assert_eq!(
+        cmd.envs[0],
+        (OsString::from("VAR1"), OsString::from("value1"))
+    );
+    assert_eq!(
+        cmd.envs[1],
+        (OsString::from("VAR2"), OsString::from("value2"))
+    );
     assert_eq!(cmd.cwd, Some(PathBuf::from("/tmp")));
     assert_eq!(cmd.input, Some("test input".to_string()));
     assert!(cmd.quiet);
