@@ -65,8 +65,12 @@ jobs:
           ~/.cargo/git
           target
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-    - name: Run clippy
+    - name: Run clippy (all targets)
       run: cargo clippy --all-targets --all-features -- -D warnings
+    - name: Run clippy (tests)
+      run: cargo clippy --tests -- -D warnings
+    - name: Run clippy (examples)
+      run: cargo clippy --examples -- -D warnings
 
   examples:
     name: Examples
@@ -87,6 +91,8 @@ jobs:
       run: cargo run --example cmd
     - name: Run fs example
       run: cargo run --example fs
+    - name: Run pipe_modes example
+      run: cargo run --example pipe_modes
 
   docs:
     name: Documentation
