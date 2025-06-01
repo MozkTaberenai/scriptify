@@ -633,7 +633,7 @@ pub mod fs;
 mod echo;
 pub use echo::*;
 
-mod color;
+pub mod color;
 mod style;
 
 /// Result type with a boxed error for convenience
