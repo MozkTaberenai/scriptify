@@ -5,7 +5,8 @@ members = [".", "xtask"]
 name = "scriptify"
 version = "0.1.0"
 edition = "2024"
-authors = ["Mozk Taberenai <mozk@me.com>"]
+rust-version = "1.87.0"
+authors = ["Mozk Taberenai <mozktaberenai@gmail.com>"]
 license = "MIT"
 description = "Scriptify your Rust - easy command execution and file operations"
 repository = "https://github.com/MozkTaberenai/scriptify"
@@ -25,7 +26,6 @@ name = "cmd"
 name = "fs"
 [[example]]
 name = "pipeline_performance"
-
 
 
 [package.metadata.docs.rs]

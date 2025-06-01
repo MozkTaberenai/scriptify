@@ -96,12 +96,20 @@ This will:
 - CI will fail if code is not properly formatted
 - Use `cargo xtask fmt` which includes additional checks
 
+## Requirements
+
+### Minimum Supported Rust Version (MSRV)
+- **Rust 1.87.0 or later** - Required for native pipeline implementation using `std::io::pipe`
+- The project explicitly targets modern Rust versions for optimal performance and features
+- MSRV is enforced in `Cargo.toml` with `rust-version = "1.87.0"`
+
 ## Platform Support
 
 ### Current Support
 - **Linux**: ✅ Full support
 - **macOS**: ✅ Full support  
 - **Windows**: ⚠️ Limited support
+</edits>
 
 ### Windows Limitations
 - Examples and tests use Unix-specific commands (`ls`, `cat`, `tr`, `sort`, etc.)
