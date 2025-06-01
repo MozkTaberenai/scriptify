@@ -85,7 +85,7 @@ fn run_precommit(verbose: bool) -> Result<()> {
     if !verbose {
         echo!("🧪 Running tests...");
     }
-    cmd!("cargo", "test").cwd(&project_root).run()?;
+    cmd!("cargo", "test").current_dir(&project_root).run()?;
     if !verbose {
         echo!("✅ Tests passed!");
     }
@@ -103,7 +103,7 @@ fn run_precommit(verbose: bool) -> Result<()> {
         "-D",
         "warnings"
     )
-    .cwd(&project_root)
+    .current_dir(&project_root)
     .run()?;
     if !verbose {
         echo!("✅ Clippy checks passed!");
@@ -113,7 +113,7 @@ fn run_precommit(verbose: bool) -> Result<()> {
     if !verbose {
         echo!("🎨 Formatting code...");
     }
-    cmd!("cargo", "fmt").cwd(&project_root).run()?;
+    cmd!("cargo", "fmt").current_dir(&project_root).run()?;
     if !verbose {
         echo!("✅ Code formatted!");
     }
@@ -136,7 +136,7 @@ fn run_ci(verbose: bool) -> Result<()> {
     if !verbose {
         echo!("🎨 Formatting code...");
     }
-    cmd!("cargo", "fmt").cwd(&project_root).run()?;
+    cmd!("cargo", "fmt").current_dir(&project_root).run()?;
     if !verbose {
         echo!("✅ Code formatted!");
     }
@@ -154,7 +154,7 @@ fn run_ci(verbose: bool) -> Result<()> {
         "-D",
         "warnings"
     )
-    .cwd(&project_root)
+    .current_dir(&project_root)
     .run()?;
     if !verbose {
         echo!("✅ Clippy checks passed!");
@@ -165,7 +165,7 @@ fn run_ci(verbose: bool) -> Result<()> {
         echo!("🔍 Running cargo check...");
     }
     cmd!("cargo", "check", "--all-targets")
-        .cwd(&project_root)
+        .current_dir(&project_root)
         .run()?;
     if !verbose {
         echo!("✅ Check passed!");
@@ -175,7 +175,7 @@ fn run_ci(verbose: bool) -> Result<()> {
     if !verbose {
         echo!("🧪 Running tests...");
     }
-    cmd!("cargo", "test").cwd(&project_root).run()?;
+    cmd!("cargo", "test").current_dir(&project_root).run()?;
     if !verbose {
         echo!("✅ Tests passed!");
     }

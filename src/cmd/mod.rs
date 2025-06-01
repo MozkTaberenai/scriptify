@@ -2,18 +2,19 @@
 
 use crate::style::*;
 
+use std::ffi::{OsStr, OsString};
 use std::io::{BufReader, Read, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{Child, Command as StdCommand, Output, Stdio};
 use std::thread;
 
 /// A simple command builder.
 #[derive(Debug, Clone)]
 pub struct Cmd {
-    program: String,
-    args: Vec<String>,
-    envs: Vec<(String, String)>,
-    cwd: Option<String>,
+    program: OsString,
+    args: Vec<OsString>,
+    envs: Vec<(OsString, OsString)>,
+    current_dir: Option<PathBuf>,
     input: Option<String>,
     quiet: bool,
 }
@@ -117,12 +118,12 @@ impl From<std::io::Error> for Error {
 
 impl Cmd {
     /// Create a new command.
-    pub fn new(program: impl Into<String>) -> Self {
+    pub fn new(program: impl AsRef<OsStr>) -> Self {
         Self {
-            program: program.into(),
+            program: program.as_ref().to_os_string(),
             args: Vec::new(),
             envs: Vec::new(),
-            cwd: None,
+            current_dir: None,
             input: None,
             quiet: false,
         }
@@ -143,8 +144,8 @@ impl Cmd {
     }
 
     /// Add an argument.
-    pub fn arg(mut self, arg: impl Into<String>) -> Self {
-        self.args.push(arg.into());
+    pub fn arg(mut self, arg: impl AsRef<OsStr>) -> Self {
+        self.args.push(arg.as_ref().to_os_string());
         self
     }
 
@@ -152,23 +153,24 @@ impl Cmd {
     pub fn args<I, S>(mut self, args: I) -> Self
     where
         I: IntoIterator<Item = S>,
-        S: Into<String>,
+        S: AsRef<OsStr>,
     {
         for arg in args {
-            self.args.push(arg.into());
+            self.args.push(arg.as_ref().to_os_string());
         }
         self
     }
 
     /// Set an environment variable.
-    pub fn env(mut self, key: impl Into<String>, val: impl Into<String>) -> Self {
-        self.envs.push((key.into(), val.into()));
+    pub fn env(mut self, key: impl AsRef<OsStr>, val: impl AsRef<OsStr>) -> Self {
+        self.envs
+            .push((key.as_ref().to_os_string(), val.as_ref().to_os_string()));
         self
     }
 
     /// Set the working directory.
-    pub fn cwd(mut self, dir: impl AsRef<Path>) -> Self {
-        self.cwd = Some(dir.as_ref().to_string_lossy().to_string());
+    pub fn current_dir(mut self, dir: impl AsRef<Path>) -> Self {
+        self.current_dir = Some(dir.as_ref().to_path_buf());
         self
     }
 
@@ -267,8 +269,8 @@ impl Cmd {
             cmd.env(key, val);
         }
 
-        if let Some(cwd) = &self.cwd {
-            cmd.current_dir(cwd);
+        if let Some(current_dir) = &self.current_dir {
+            cmd.current_dir(current_dir);
         }
 
         if capture_output {
@@ -280,7 +282,10 @@ impl Cmd {
         }
 
         let mut child = cmd.spawn().map_err(|e| Error {
-            message: format!("Failed to spawn command: {}", self.program),
+            message: format!(
+                "Failed to spawn command: {}",
+                self.program.to_string_lossy()
+            ),
             source: Some(e),
         })?;
 
@@ -315,24 +320,24 @@ impl Cmd {
         let mut echo = crate::Echo::new();
         echo = echo.sput("cmd", BRIGHT_BLACK);
 
-        if let Some(cwd) = &self.cwd {
+        if let Some(current_dir) = &self.current_dir {
             echo = echo
                 .sput("cd:", BRIGHT_BLUE)
-                .sput(cwd, UNDERLINE_BRIGHT_BLUE);
+                .sput(current_dir.to_string_lossy(), UNDERLINE_BRIGHT_BLUE);
         }
 
         for (key, val) in &self.envs {
             echo = echo
                 .sput("env:", BRIGHT_BLUE)
-                .sput(key, UNDERLINE_BRIGHT_BLUE)
+                .sput(key.to_string_lossy(), UNDERLINE_BRIGHT_BLUE)
                 .put("=")
-                .sput(val, UNDERLINE_BRIGHT_BLUE);
+                .sput(val.to_string_lossy(), UNDERLINE_BRIGHT_BLUE);
         }
 
-        echo = echo.sput(&self.program, BOLD_CYAN);
+        echo = echo.sput(self.program.to_string_lossy(), BOLD_CYAN);
 
         for arg in &self.args {
-            echo = echo.sput(arg, BOLD_UNDERLINE);
+            echo = echo.sput(arg.to_string_lossy(), BOLD_UNDERLINE);
         }
 
         echo.end();
@@ -493,7 +498,10 @@ impl Pipeline {
             }
 
             let mut child = cmd.spawn().map_err(|e| Error {
-                message: format!("Failed to spawn command: {}", cmd_def.program),
+                message: format!(
+                    "Failed to spawn command: {}",
+                    cmd_def.program.to_string_lossy()
+                ),
                 source: Some(e),
             })?;
 
@@ -555,8 +563,8 @@ impl Pipeline {
             cmd.env(key, val);
         }
 
-        if let Some(cwd) = &cmd_def.cwd {
-            cmd.current_dir(cwd);
+        if let Some(current_dir) = &cmd_def.current_dir {
+            cmd.current_dir(current_dir);
         }
 
         cmd
@@ -576,24 +584,24 @@ impl Pipeline {
                 echo = echo.sput(pipe_symbol, MAGENTA);
             }
 
-            if let Some(cwd) = &cmd.cwd {
+            if let Some(current_dir) = &cmd.current_dir {
                 echo = echo
                     .sput("cd:", BRIGHT_BLUE)
-                    .sput(cwd, UNDERLINE_BRIGHT_BLUE);
+                    .sput(current_dir.to_string_lossy(), UNDERLINE_BRIGHT_BLUE);
             }
 
             for (key, val) in &cmd.envs {
                 echo = echo
                     .sput("env:", BRIGHT_BLUE)
-                    .sput(key, UNDERLINE_BRIGHT_BLUE)
+                    .sput(key.to_string_lossy(), UNDERLINE_BRIGHT_BLUE)
                     .put("=")
-                    .sput(val, UNDERLINE_BRIGHT_BLUE);
+                    .sput(val.to_string_lossy(), UNDERLINE_BRIGHT_BLUE);
             }
 
-            echo = echo.sput(&cmd.program, BOLD_CYAN);
+            echo = echo.sput(cmd.program.to_string_lossy(), BOLD_CYAN);
 
             for arg in &cmd.args {
-                echo = echo.sput(arg, BOLD_UNDERLINE);
+                echo = echo.sput(arg.to_string_lossy(), BOLD_UNDERLINE);
             }
         }
 

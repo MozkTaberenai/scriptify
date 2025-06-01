@@ -68,8 +68,10 @@ macro_rules! echo {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
 
     #[test]
+    #[serial]
     fn test_echo_new_normal() {
         // Save original state
         let original = std::env::var("NO_ECHO").ok();
@@ -91,6 +93,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_echo_new_quiet_env() {
         // Save original state
         let original = std::env::var("NO_ECHO").ok();
@@ -236,6 +239,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_echo_macro_with_no_echo_env() {
         // Save original state
         let original = std::env::var("NO_ECHO").ok();
@@ -306,6 +310,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_echo_default() {
         // Save original state
         let original = std::env::var("NO_ECHO").ok();

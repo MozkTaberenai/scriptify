@@ -86,7 +86,7 @@ fn test_working_directory() {
     let current_dir = std::env::current_dir().unwrap();
     let parent = current_dir.parent().unwrap_or(&current_dir);
 
-    let result = cmd!("pwd").cwd(parent).output().unwrap();
+    let result = cmd!("pwd").current_dir(parent).output().unwrap();
 
     assert_eq!(result.trim(), parent.to_string_lossy());
 }
