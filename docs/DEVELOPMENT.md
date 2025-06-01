@@ -144,7 +144,11 @@ Fix rustfmt formatting issues
 ```
 scriptify/
 ├── src/lib.rs              # Main documentation (README source)
-├── src/cmd/                # Command execution functionality
+├── src/cmd.rs              # Command execution functionality
+├── src/fs.rs               # File system operations
+├── src/echo.rs             # Output formatting
+├── src/color.rs            # Color definitions
+├── src/style.rs            # Style utilities
 ├── examples/               # Examples (auto-included in README)
 ├── xtask/                  # Development task runner
 │   ├── src/main.rs         # Task definitions
