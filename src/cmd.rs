@@ -291,9 +291,9 @@ impl Pipeline {
         match self.try_native_pipeline(capture_output) {
             Ok(result) => Ok(result),
             Err(_) => {
-                // Fallback to shell-based pipeline for compatibility
-                // This ensures the library works even if native pipes fail
-                self.execute_shell_pipeline(capture_output)
+                // Fallback to stdio-based pipeline instead of shell
+                // This maintains shell-free operation while ensuring compatibility
+                self.try_stdio_pipeline(capture_output)
             }
         }
     }
@@ -395,50 +395,99 @@ impl Pipeline {
         Ok(result)
     }
 
-    fn execute_shell_pipeline(self, capture_output: bool) -> Result<Vec<u8>, Error> {
-        // Fallback to shell-based pipeline for compatibility
-        // This is the original implementation that delegates to the system shell
-        // Less efficient but more compatible with complex shell features
-        let mut shell_command = String::new();
-        for (i, cmd) in self.commands.iter().enumerate() {
-            if i > 0 {
-                shell_command.push_str(" | ");
+    fn try_stdio_pipeline(&self, capture_output: bool) -> Result<Vec<u8>, Error> {
+        // Fallback native pipeline implementation using Stdio::piped()
+        // This is compatible with older Rust versions and avoids shell dependency
+        use std::process::{Child, Stdio};
+        use std::thread;
+        use std::io::{BufReader, Read, Write};
+
+        let mut children: Vec<Child> = Vec::new();
+
+        // Spawn all commands in the pipeline
+        for (i, cmd_def) in self.commands.iter().enumerate() {
+            let mut cmd = Self::build_std_command_static(cmd_def);
+
+            // Set up stdin
+            if i == 0 {
+                // First command: use input if provided
+                if self.input.is_some() {
+                    cmd.stdin(Stdio::piped());
+                }
+            } else {
+                // Subsequent commands: use previous command's stdout
+                if let Some(prev_child) = children.last_mut() {
+                    if let Some(stdout) = prev_child.stdout.take() {
+                        cmd.stdin(Stdio::from(stdout));
+                    }
+                }
             }
-            shell_command.push_str(&cmd.program);
-            for arg in &cmd.args {
-                shell_command.push(' ');
-                shell_command.push_str(arg);
+
+            // Set up stdout
+            if i == self.commands.len() - 1 {
+                // Last command: capture output if requested
+                if capture_output {
+                    cmd.stdout(Stdio::piped());
+                }
+            } else {
+                // Intermediate commands: pipe to next command
+                cmd.stdout(Stdio::piped());
             }
+
+            let mut child = cmd.spawn().map_err(|e| Error {
+                message: format!("Failed to spawn command: {}", cmd_def.program),
+                source: Some(e),
+            })?;
+
+            // Handle input for the first command
+            if i == 0 {
+                if let Some(input) = &self.input {
+                    if let Some(stdin) = child.stdin.take() {
+                        let input_clone = input.clone();
+                        thread::spawn(move || {
+                            let mut stdin = stdin;
+                            let _ = stdin.write_all(input_clone.as_bytes());
+                        });
+                    }
+                }
+            }
+
+            children.push(child);
         }
 
-        let mut final_cmd = if cfg!(target_os = "windows") {
-            Cmd::new("cmd").arg("/C").arg(&shell_command)
-        } else {
-            Cmd::new("sh").arg("-c").arg(&shell_command)
-        }
-        .quiet();
-
-        // Apply environment variables from first command
-        if let Some(first_cmd) = self.commands.first() {
-            for (key, val) in &first_cmd.envs {
-                final_cmd = final_cmd.env(key, val);
-            }
-            if let Some(cwd) = &first_cmd.cwd {
-                final_cmd = final_cmd.cwd(cwd);
-            }
-        }
-
-        if let Some(input) = self.input {
-            final_cmd = final_cmd.input(input);
-        }
-
+        // Collect output from the last command if needed
+        let mut result = Vec::new();
         if capture_output {
-            Ok(final_cmd.output()?.into_bytes())
-        } else {
-            final_cmd.run()?;
-            Ok(Vec::new())
+            if let Some(last_child) = children.last_mut() {
+                if let Some(stdout) = last_child.stdout.take() {
+                    let mut reader = BufReader::new(stdout);
+                    reader.read_to_end(&mut result).map_err(|e| Error {
+                        message: "Failed to read output".to_string(),
+                        source: Some(e),
+                    })?;
+                }
+            }
         }
+
+        // Wait for all children to complete
+        for mut child in children {
+            let status = child.wait().map_err(|e| Error {
+                message: "Failed to wait for command".to_string(),
+                source: Some(e),
+            })?;
+            
+            if !status.success() {
+                return Err(Error {
+                    message: format!("Command failed with exit code: {:?}", status.code()),
+                    source: None,
+                });
+            }
+        }
+
+        Ok(result)
     }
+
+
 
     fn build_std_command_static(cmd_def: &Cmd) -> StdCommand {
         let mut cmd = StdCommand::new(&cmd_def.program);
