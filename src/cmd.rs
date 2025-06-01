@@ -420,7 +420,7 @@ impl Pipeline {
 
     fn execute_native_pipeline(self, capture_output: bool) -> Result<Vec<u8>, Error> {
         // Native pipeline implementation using std::io::pipe (Rust 1.87.0+)
-        // This provides several advantages over shell-based pipelines:
+        // This provides several advantages:
         // 1. Memory efficiency: streaming data instead of buffering everything
         // 2. Better error handling: individual process status tracking
         // 3. Platform independence: no shell dependency
@@ -431,8 +431,7 @@ impl Pipeline {
 
     fn try_native_pipeline(&self, capture_output: bool) -> Result<Vec<u8>, Error> {
         // Native pipeline implementation using std::io::pipe from Rust 1.87.0
-        // This creates anonymous pipes directly in memory, avoiding the need
-        // for shell interpretation and enabling true streaming processing
+        // This creates anonymous pipes directly in memory, enabling true streaming processing
         //
         // Supports all PipeMode variants:
         // - Stdout: Standard pipe between stdout->stdin
@@ -440,7 +439,7 @@ impl Pipeline {
         // - Both: Use try_clone() to merge stdout+stderr into single pipe
         //
         // This implementation leverages Rust 1.87.0's anonymous pipes with
-        // try_clone() capability for efficient stream merging without threads
+        // try_clone() capability for efficient stream merging
 
         let mut children: Vec<Child> = Vec::new();
         let mut prev_reader: Option<std::io::PipeReader> = None;
@@ -838,7 +837,7 @@ mod cmd_tests {
             .unwrap();
         assert_eq!(stdout_result.trim(), "native test");
 
-        // Test stderr mode (should use native pipeline with try_clone)
+        // Test stderr mode (uses native pipeline with try_clone)
         let stderr_result = cmd!("sh", "-c", "echo 'native error' >&2")
             .pipe(cmd!("wc", "-c"))
             .pipe_mode(PipeMode::Stderr)
@@ -847,7 +846,7 @@ mod cmd_tests {
             .unwrap();
         assert_eq!(stderr_result.trim(), "13");
 
-        // Test both mode (should use native pipeline with try_clone)
+        // Test both mode (uses native pipeline with try_clone)
         let both_result = cmd!("sh", "-c", "echo 'out'; echo 'err' >&2")
             .pipe(cmd!("wc", "-l"))
             .pipe_mode(PipeMode::Both)

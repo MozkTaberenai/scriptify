@@ -39,9 +39,9 @@ scriptify = "0.1.0"
 Currently supported platforms:
 - **Linux** ✅ Full support with native pipe optimization
 - **macOS** ✅ Full support with native pipe optimization
-- **Windows** ⚠️ Limited support with automatic fallback
+- **Windows** ⚠️ Limited support
 
-**Note on Windows**: While the core functionality works on Windows, many examples and tests use Unix-specific commands (`ls`, `cat`, `tr`, `sort`, etc.) that are not available in standard Windows environments. The new native pipeline implementation automatically falls back to shell-based pipes on Windows for compatibility. Windows support could be improved in future versions with command mapping or by requiring tools like Git Bash or WSL.
+**Note on Windows**: While the core functionality works on Windows, many examples and tests use Unix-specific commands (`ls`, `cat`, `tr`, `sort`, etc.) that are not available in standard Windows environments. Windows support could be improved in future versions with command mapping or by requiring tools like Git Bash or WSL.
 
 ### Requirements
 
@@ -103,7 +103,7 @@ echo!("Rust processes:", result.trim());
 - **Memory efficient**: Uses streaming instead of buffering all data
 - **Better performance**: Native pipes reduce process overhead
 - **Platform independent**: No shell dependency for multi-command pipes
-- **Automatic fallback**: Falls back to shell-based pipes if needed for compatibility
+- **Native implementation**: Uses `std::io::pipe` for optimal performance
 
 ```rust
 use scriptify::*;
@@ -342,141 +342,6 @@ License: MIT
 
 The following examples are available in the `examples/` directory:
 
-### pipeline_performance
-
-```rust
-println!("Pipeline Performance Comparison");
-println!("===============================\n");
-// Test with a reasonably large dataset
-let test_data = generate_test_data(10000);
-println!("Testing with {} lines of data", test_data.lines().count());
-println!("Data size: {} bytes\n", test_data.len());
-// Test 1: Simple pipeline with native pipes
-println!("Test 1: Simple text processing pipeline");
-let start = Instant::now();
-let result1 = cmd!("tr", "[:lower:]", "[:upper:]")
-    .pipe(cmd!("sort"))
-    .pipe(cmd!("uniq", "-c"))
-    .input(&test_data)
-    .output()?;
-let duration1 = start.elapsed();
-println!("Native pipeline result: {} lines", result1.lines().count());
-println!("Time taken: {:?}\n", duration1);
-// Test 2: Memory efficiency comparison
-println!("Test 2: Memory efficiency with large data streaming");
-let large_data = generate_test_data(50000);
-let start = Instant::now();
-let result2 = cmd!("grep", "test")
-    .pipe(cmd!("wc", "-l"))
-    .input(&large_data)
-    .output()?;
-let duration2 = start.elapsed();
-println!("Large data processing result: {}", result2.trim());
-println!("Time taken: {:?}\n", duration2);
-// Test 3: Complex pipeline with multiple stages
-println!("Test 3: Complex multi-stage pipeline");
-let start = Instant::now();
-let result3 = cmd!("cat")
-    .pipe(cmd!("grep", "data"))
-    .pipe(cmd!("cut", "-d", ":", "-f", "2"))
-    .pipe(cmd!("sort", "-n"))
-    .pipe(cmd!("tail", "-5"))
-    .input(&test_data)
-    .output()?;
-let duration3 = start.elapsed();
-println!("Complex pipeline result: {} lines", result3.lines().count());
-println!("Time taken: {:?}\n", duration3);
-// Test 4: Demonstrate streaming vs buffering
-println!("Test 4: Real-time processing demonstration");
-let start = Instant::now();
-// This would process data as it comes in, not waiting for all input
-cmd!("head", "-100")
-    .pipe(cmd!("nl"))
-    .input(&test_data)
-    .run()?;
-let duration4 = start.elapsed();
-println!("Streaming processing time: {:?}\n", duration4);
-println!("Performance Summary:");
-println!("==================");
-println!("✅ Native pipes provide better memory efficiency");
-println!("✅ Reduced process overhead compared to shell delegation");
-println!("✅ True streaming processing for large datasets");
-println!("✅ Better error isolation and handling");
-println!("✅ Platform-independent implementation");
-Ok(())
-```
-
-Run with: `cargo run --example pipeline_performance`
-
-### cmd
-
-```rust
-// Basic command execution
-cmd!("echo", "Hello, World!").run()?;
-// Command with multiple arguments
-cmd!("echo").args(["a", "b", "c"]).run()?;
-// Command with environment variable
-cmd!("echo", "hello").env("USER", "alice").run()?;
-// Command with working directory
-cmd!("ls", "-la").cwd("src").run()?;
-// Get command output
-let date = cmd!("date").output()?;
-echo!("Current date:", date.trim());
-// Handle command that might fail
-if let Err(err) = cmd!("unknown_command").run() {
-    echo!("Command failed:", err);
-}
-// Command piping
-cmd!("echo", "hello world")
-    .pipe(cmd!("tr", "[:lower:]", "[:upper:]"))
-    .run()?;
-// Multiple pipes
-cmd!("date")
-    .pipe(cmd!("rev"))
-    .pipe(cmd!("tr", "[:upper:]", "[:lower:]"))
-    .run()?;
-// Pipe with input
-let result = cmd!("tr", "[:lower:]", "[:upper:]")
-    .input("hello world")
-    .output()?;
-echo!("Uppercase:", result.trim());
-// Pipeline with input
-let result = cmd!("sort")
-    .pipe(cmd!("uniq"))
-    .input("apple\nbanana\napple\ncherry\nbanana")
-    .output()?;
-echo!("Unique fruits:", result.trim());
-// Quiet execution (no echo)
-cmd!("echo", "This won't be echoed").quiet().run()?;
-Ok(())
-```
-
-Run with: `cargo run --example cmd`
-
-### fs
-
-```rust
-fs::create_dir("tmp")?;
-fs::write("tmp/a.txt", "abc")?;
-show_metadata("tmp/a.txt")?;
-fs::copy("tmp/a.txt", "tmp/b.txt")?;
-show_metadata("tmp/b.txt")?;
-fs::hard_link("tmp/a.txt", "tmp/h.txt")?;
-show_metadata("tmp/h.txt")?;
-fs::rename("tmp/a.txt", "tmp/c.txt")?;
-show_metadata("tmp/c.txt")?;
-fs::create_dir_all("tmp/d/e")?;
-for entry in fs::read_dir("tmp")? {
-    show_metadata(entry?.path())?;
-}
-fs::remove_file("tmp/b.txt")?;
-fs::remove_dir("tmp/d/e")?;
-fs::remove_dir_all("tmp")?;
-Ok(())
-```
-
-Run with: `cargo run --example fs`
-
 ### pipe_modes
 
 ```rust
@@ -549,6 +414,141 @@ Ok(())
 ```
 
 Run with: `cargo run --example pipe_modes`
+
+### pipeline_performance
+
+```rust
+println!("Pipeline Performance Demonstration");
+println!("==================================\n");
+// Test with a reasonably large dataset
+let test_data = generate_test_data(10000);
+println!("Testing with {} lines of data", test_data.lines().count());
+println!("Data size: {} bytes\n", test_data.len());
+// Test 1: Simple native pipeline
+println!("Test 1: Simple text processing pipeline");
+let start = Instant::now();
+let result1 = cmd!("tr", "[:lower:]", "[:upper:]")
+    .pipe(cmd!("sort"))
+    .pipe(cmd!("uniq", "-c"))
+    .input(&test_data)
+    .output()?;
+let duration1 = start.elapsed();
+println!("Pipeline result: {} lines", result1.lines().count());
+println!("Time taken: {:?}\n", duration1);
+// Test 2: Memory efficiency comparison
+println!("Test 2: Memory efficiency with large data streaming");
+let large_data = generate_test_data(50000);
+let start = Instant::now();
+let result2 = cmd!("grep", "test")
+    .pipe(cmd!("wc", "-l"))
+    .input(&large_data)
+    .output()?;
+let duration2 = start.elapsed();
+println!("Large data processing result: {}", result2.trim());
+println!("Time taken: {:?}\n", duration2);
+// Test 3: Complex pipeline with multiple stages
+println!("Test 3: Complex multi-stage pipeline");
+let start = Instant::now();
+let result3 = cmd!("cat")
+    .pipe(cmd!("grep", "data"))
+    .pipe(cmd!("cut", "-d", ":", "-f", "2"))
+    .pipe(cmd!("sort", "-n"))
+    .pipe(cmd!("tail", "-5"))
+    .input(&test_data)
+    .output()?;
+let duration3 = start.elapsed();
+println!("Complex pipeline result: {} lines", result3.lines().count());
+println!("Time taken: {:?}\n", duration3);
+// Test 4: Demonstrate streaming vs buffering
+println!("Test 4: Real-time processing demonstration");
+let start = Instant::now();
+// This would process data as it comes in, not waiting for all input
+cmd!("head", "-100")
+    .pipe(cmd!("nl"))
+    .input(&test_data)
+    .run()?;
+let duration4 = start.elapsed();
+println!("Streaming processing time: {:?}\n", duration4);
+println!("Native Pipeline Features:");
+println!("========================");
+println!("✅ Memory efficient streaming processing");
+println!("✅ Low process overhead with direct pipes");
+println!("✅ Real-time data processing for large datasets");
+println!("✅ Excellent error isolation and handling");
+println!("✅ Platform-independent implementation");
+Ok(())
+```
+
+Run with: `cargo run --example pipeline_performance`
+
+### fs
+
+```rust
+fs::create_dir("tmp")?;
+fs::write("tmp/a.txt", "abc")?;
+show_metadata("tmp/a.txt")?;
+fs::copy("tmp/a.txt", "tmp/b.txt")?;
+show_metadata("tmp/b.txt")?;
+fs::hard_link("tmp/a.txt", "tmp/h.txt")?;
+show_metadata("tmp/h.txt")?;
+fs::rename("tmp/a.txt", "tmp/c.txt")?;
+show_metadata("tmp/c.txt")?;
+fs::create_dir_all("tmp/d/e")?;
+for entry in fs::read_dir("tmp")? {
+    show_metadata(entry?.path())?;
+}
+fs::remove_file("tmp/b.txt")?;
+fs::remove_dir("tmp/d/e")?;
+fs::remove_dir_all("tmp")?;
+Ok(())
+```
+
+Run with: `cargo run --example fs`
+
+### cmd
+
+```rust
+// Basic command execution
+cmd!("echo", "Hello, World!").run()?;
+// Command with multiple arguments
+cmd!("echo").args(["a", "b", "c"]).run()?;
+// Command with environment variable
+cmd!("echo", "hello").env("USER", "alice").run()?;
+// Command with working directory
+cmd!("ls", "-la").cwd("src").run()?;
+// Get command output
+let date = cmd!("date").output()?;
+echo!("Current date:", date.trim());
+// Handle command that might fail
+if let Err(err) = cmd!("unknown_command").run() {
+    echo!("Command failed:", err);
+}
+// Command piping
+cmd!("echo", "hello world")
+    .pipe(cmd!("tr", "[:lower:]", "[:upper:]"))
+    .run()?;
+// Multiple pipes
+cmd!("date")
+    .pipe(cmd!("rev"))
+    .pipe(cmd!("tr", "[:upper:]", "[:lower:]"))
+    .run()?;
+// Pipe with input
+let result = cmd!("tr", "[:lower:]", "[:upper:]")
+    .input("hello world")
+    .output()?;
+echo!("Uppercase:", result.trim());
+// Pipeline with input
+let result = cmd!("sort")
+    .pipe(cmd!("uniq"))
+    .input("apple\nbanana\napple\ncherry\nbanana")
+    .output()?;
+echo!("Unique fruits:", result.trim());
+// Quiet execution (no echo)
+cmd!("echo", "This won't be echoed").quiet().run()?;
+Ok(())
+```
+
+Run with: `cargo run --example cmd`
 
 
 ## Development

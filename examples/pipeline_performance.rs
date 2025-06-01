@@ -1,14 +1,14 @@
-//! Performance comparison example for pipeline implementations
+//! Pipeline performance demonstration
 //!
-//! This example demonstrates the performance improvements achieved with
-//! Rust 1.87.0's std::io::pipe compared to shell-based pipelines.
+//! This example demonstrates the native pipeline performance features
+//! in scriptify using Rust 1.87.0's std::io::pipe implementation.
 
 use scriptify::*;
 use std::time::Instant;
 
 fn main() -> Result<()> {
-    println!("Pipeline Performance Comparison");
-    println!("===============================\n");
+    println!("Pipeline Performance Demonstration");
+    println!("==================================\n");
 
     // Test with a reasonably large dataset
     let test_data = generate_test_data(10000);
@@ -16,7 +16,7 @@ fn main() -> Result<()> {
     println!("Testing with {} lines of data", test_data.lines().count());
     println!("Data size: {} bytes\n", test_data.len());
 
-    // Test 1: Simple pipeline with native pipes
+    // Test 1: Simple native pipeline
     println!("Test 1: Simple text processing pipeline");
     let start = Instant::now();
     let result1 = cmd!("tr", "[:lower:]", "[:upper:]")
@@ -26,7 +26,7 @@ fn main() -> Result<()> {
         .output()?;
     let duration1 = start.elapsed();
 
-    println!("Native pipeline result: {} lines", result1.lines().count());
+    println!("Pipeline result: {} lines", result1.lines().count());
     println!("Time taken: {:?}\n", duration1);
 
     // Test 2: Memory efficiency comparison
@@ -71,12 +71,12 @@ fn main() -> Result<()> {
     let duration4 = start.elapsed();
     println!("Streaming processing time: {:?}\n", duration4);
 
-    println!("Performance Summary:");
-    println!("==================");
-    println!("✅ Native pipes provide better memory efficiency");
-    println!("✅ Reduced process overhead compared to shell delegation");
-    println!("✅ True streaming processing for large datasets");
-    println!("✅ Better error isolation and handling");
+    println!("Native Pipeline Features:");
+    println!("========================");
+    println!("✅ Memory efficient streaming processing");
+    println!("✅ Low process overhead with direct pipes");
+    println!("✅ Real-time data processing for large datasets");
+    println!("✅ Excellent error isolation and handling");
     println!("✅ Platform-independent implementation");
 
     Ok(())
@@ -110,8 +110,7 @@ mod tests {
 
     #[test]
     fn test_memory_efficiency() -> Result<()> {
-        // This test would previously consume a lot of memory with shell pipes
-        // but now streams efficiently with native pipes
+        // Test memory efficiency with native pipes streaming
         let large_data = generate_test_data(10000);
 
         let result = cmd!("head", "-10")

@@ -32,9 +32,9 @@
 //! Currently supported platforms:
 //! - **Linux** ✅ Full support with native pipe optimization
 //! - **macOS** ✅ Full support with native pipe optimization
-//! - **Windows** ⚠️ Limited support with automatic fallback
+//! - **Windows** ⚠️ Limited support
 //!
-//! **Note on Windows**: While the core functionality works on Windows, many examples and tests use Unix-specific commands (`ls`, `cat`, `tr`, `sort`, etc.) that are not available in standard Windows environments. The new native pipeline implementation automatically falls back to shell-based pipes on Windows for compatibility. Windows support could be improved in future versions with command mapping or by requiring tools like Git Bash or WSL.
+//! **Note on Windows**: While the core functionality works on Windows, many examples and tests use Unix-specific commands (`ls`, `cat`, `tr`, `sort`, etc.) that are not available in standard Windows environments. Windows support could be improved in future versions with command mapping or by requiring tools like Git Bash or WSL.
 //!
 //! ## Requirements
 //!
@@ -98,7 +98,7 @@
 //! - **Memory efficient**: Uses streaming instead of buffering all data
 //! - **Better performance**: Native pipes reduce process overhead
 //! - **Platform independent**: No shell dependency for multi-command pipes
-//! - **Automatic fallback**: Falls back to shell-based pipes if needed for compatibility
+//! - **Native implementation**: Uses `std::io::pipe` for optimal performance
 //!
 //! ```no_run
 //! use scriptify::*;
