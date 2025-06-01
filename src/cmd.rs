@@ -651,7 +651,7 @@ impl Pipeline {
                     },
                     PipeMode::Stderr => {
                         // Need to check if there's a previous child with stderr to pipe
-                        if children.len() > 0 {
+                        if !children.is_empty() {
                             if let Some(prev_child) = children.last_mut() {
                                 if let Some(stderr) = prev_child.stderr.take() {
                                     cmd.stdin(Stdio::from(stderr));
@@ -670,9 +670,7 @@ impl Pipeline {
             let is_last = i == self.commands.len() - 1;
             match self.pipe_mode {
                 PipeMode::Stdout => {
-                    if !is_last {
-                        cmd.stdout(Stdio::piped());
-                    } else if capture_output {
+                    if !is_last || capture_output {
                         cmd.stdout(Stdio::piped());
                     }
                 },
