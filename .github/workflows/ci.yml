@@ -8,6 +8,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
 
 jobs:
   test:
@@ -15,8 +16,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
-        rust: [stable, beta]
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        rust: [stable, nightly]
     steps:
     - uses: actions/checkout@v4
     - name: Install Rust
@@ -24,15 +25,17 @@ jobs:
       with:
         toolchain: ${{ matrix.rust }}
     - name: Cache dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           ~/.cargo/registry
           ~/.cargo/git
           target
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test --verbose --all-targets
     - name: Run doc tests
       run: cargo test --doc
 
@@ -58,19 +61,17 @@ jobs:
       with:
         components: clippy
     - name: Cache dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           ~/.cargo/registry
           ~/.cargo/git
           target
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-    - name: Run clippy (all targets)
-      run: cargo clippy --all-targets --all-features -- -D warnings
-    - name: Run clippy (tests)
-      run: cargo clippy --tests -- -D warnings
-    - name: Run clippy (examples)
-      run: cargo clippy --examples -- -D warnings
+        restore-keys: |
+          ${{ runner.os }}-cargo-
+    - name: Run clippy
+      run: cargo xtask precommit
 
   examples:
     name: Examples
@@ -80,17 +81,29 @@ jobs:
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
     - name: Cache dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           ~/.cargo/registry
           ~/.cargo/git
           target
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-    - name: Run cmd example
-      run: cargo run --example cmd
-    - name: Run fs example
-      run: cargo run --example fs
+        restore-keys: |
+          ${{ runner.os }}-cargo-
+    - name: Run hello_world example
+      run: cargo run --example hello_world
+    - name: Run simple_commands example
+      run: cargo run --example simple_commands
+    - name: Run simple_fs example
+      run: cargo run --example simple_fs
+    - name: Run simple_pipes example
+      run: cargo run --example simple_pipes
+    - name: Run error_handling example
+      run: cargo run --example error_handling
+    - name: Run environment example
+      run: cargo run --example environment
+    - name: Run complex_pipes example
+      run: cargo run --example complex_pipes
     - name: Run pipe_modes example
       run: cargo run --example pipe_modes
 
@@ -102,12 +115,38 @@ jobs:
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
     - name: Cache dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           ~/.cargo/registry
           ~/.cargo/git
           target
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-
     - name: Check documentation
-      run: cargo doc --no-deps --document-private-items
+      run: cargo doc --no-deps --document-private-items --all-features
+    - name: Generate README
+      run: cargo xtask readme
+
+  msrv:
+    name: MSRV (1.87.0)
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install Rust 1.87.0
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: 1.87.0
+    - name: Cache dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-msrv-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-msrv-cargo-
+    - name: Check MSRV compatibility
+      run: cargo check --all-targets
