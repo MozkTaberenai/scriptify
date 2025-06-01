@@ -1,57 +1,53 @@
-use scriptant::*;
-
-type AnyError = Box<dyn std::error::Error>;
-type Result<T, E = AnyError> = std::result::Result<T, E>;
+use scriptify::*;
 
 fn main() -> Result<()> {
-    cmd!("echo", "a").run()?;
-    cmd!("echo").args((0..10).map(|n| n.to_string())).run()?;
-    cmd!("echo", "arg with  space").run()?;
-    cmd!("echo", "with", "env").env("AAA", "aaa").run()?;
-    cmd!("ls", "-alF").current_dir("src").run()?;
-
-    if let Err(err) = cmd!("unknown_command", "arg1", "arg2").run() {
-        echo!(err);
+    // Basic command execution
+    cmd!("echo", "Hello, World!").run()?;
+    
+    // Command with multiple arguments
+    cmd!("echo").args(["a", "b", "c"]).run()?;
+    
+    // Command with environment variable
+    cmd!("echo", "hello").env("USER", "alice").run()?;
+    
+    // Command with working directory
+    cmd!("ls", "-la").cwd("src").run()?;
+    
+    // Get command output
+    let date = cmd!("date").output()?;
+    echo!("Current date:", date.trim());
+    
+    // Handle command that might fail
+    if let Err(err) = cmd!("unknown_command").run() {
+        echo!("Command failed:", err);
     }
-
+    
+    // Command piping
+    cmd!("echo", "hello world")
+        .pipe(cmd!("tr", "[:lower:]", "[:upper:]"))
+        .run()?;
+    
+    // Multiple pipes
     cmd!("date")
         .pipe(cmd!("rev"))
         .pipe(cmd!("tr", "[:upper:]", "[:lower:]"))
         .run()?;
-
-    let out = cmd!("echo", "pipe input").read_to_string()?;
-    echo!("pipe output:", out.trim());
-
-    b"pipe input from slice\n"
-        .pipe(cmd!("tr", "[:lower:]", "[:upper:]"))
-        .run()?;
-
-    let pipe_input = "abcde";
-    echo!("pipe input:", pipe_input);
-    pipe_input
-        .as_bytes()
-        .pipe(cmd!("rev"))
-        .pipe(cmd!("tr", "[:lower:]", "[:upper:]"))
-        .run()?;
-
-    let out = cmd!("date", "-uR")
-        .pipe(cmd!("tr", "[:lower:]", "[:upper:]"))
-        .read_to_string()?;
-    echo!("pipe output:", out.trim());
-
-    let (mut stdin, handle) = cmd!("tr", "[:lower:]", "[:upper:]").write_spawn()?;
-    writeln!(stdin, "x")?;
-    stdin.write_all(b"y\n")?;
-    stdin.write_all("z\n".as_bytes())?;
-    drop(stdin);
-    handle.wait()?;
-
-    cmd!("echo", "xyz")
-        .pipe(BufWriter::new(std::fs::File::create("tmp.txt")?))
-        .spawn()?
-        .wait()?;
-    cmd!("cat", "tmp.txt").run()?;
-    fs::remove_file("tmp.txt")?;
-
+    
+    // Pipe with input
+    let result = cmd!("tr", "[:lower:]", "[:upper:]")
+        .input("hello world")
+        .output()?;
+    echo!("Uppercase:", result.trim());
+    
+    // Pipeline with input
+    let result = cmd!("sort")
+        .pipe(cmd!("uniq"))
+        .input("apple\nbanana\napple\ncherry\nbanana")
+        .output()?;
+    echo!("Unique fruits:", result.trim());
+    
+    // Quiet execution (no echo)
+    cmd!("echo", "This won't be echoed").quiet().run()?;
+    
     Ok(())
 }

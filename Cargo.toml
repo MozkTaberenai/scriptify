@@ -1,12 +1,15 @@
+[workspace]
+members = [".", "xtask"]
+
 [package]
-name = "scriptant"
+name = "scriptify"
 version = "0.1.0"
 edition = "2024"
 authors = ["Mozk Taberenai <mozk@me.com>"]
 license = "MIT"
-description = "Rust scripting assistant"
-repository = "https://github.com/MozkTaberenai/scriptant"
-homepage = "https://github.com/MozkTaberenai/scriptant"
+description = "Scriptify your Rust - easy command execution and file operations"
+repository = "https://github.com/MozkTaberenai/scriptify"
+homepage = "https://github.com/MozkTaberenai/scriptify"
 categories = ["command-line-interface"]
 
 [dependencies]
@@ -14,8 +17,18 @@ anstyle = "1.0.7"
 
 [dev-dependencies]
 ansi-to-html = "0.2.1"
+cargo-readme = "3.3.1"
 
 [[example]]
 name = "cmd"
 [[example]]
 name = "fs"
+
+
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[package.metadata.readme]
+readme-path = "README.md"
