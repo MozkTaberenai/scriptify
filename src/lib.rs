@@ -4,9 +4,9 @@
 //!
 //! ## Why scriptify?
 //!
-//! When you need to write system administration scripts, build tools, or automation in Rust, 
-//! you often find yourself wrestling with `std::process::Command` and `std::fs`. scriptify 
-//! provides a clean, shell-script-like interface while keeping all the benefits of Rust's 
+//! When you need to write system administration scripts, build tools, or automation in Rust,
+//! you often find yourself wrestling with `std::process::Command` and `std::fs`. scriptify
+//! provides a clean, shell-script-like interface while keeping all the benefits of Rust's
 //! type safety and error handling.
 //!
 //! ### Key Features
@@ -304,7 +304,7 @@
 #[doc(no_inline)]
 pub use std::ffi::{OsStr, OsString};
 #[doc(no_inline)]
-pub use std::io::{prelude::*, BufReader, BufWriter};
+pub use std::io::{BufReader, BufWriter, prelude::*};
 #[doc(no_inline)]
 pub use std::path::{Path, PathBuf};
 

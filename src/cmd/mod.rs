@@ -75,7 +75,7 @@ impl Cmd {
         if parts.is_empty() {
             return Self::new("");
         }
-        
+
         let mut command = Self::new(parts[0]);
         for arg in &parts[1..] {
             command = command.arg(*arg);
@@ -90,7 +90,7 @@ impl Cmd {
     }
 
     /// Add multiple arguments.
-    pub fn args<I, S>(mut self, args: I) -> Self 
+    pub fn args<I, S>(mut self, args: I) -> Self
     where
         I: IntoIterator<Item = S>,
         S: Into<String>,
@@ -124,8 +124,6 @@ impl Cmd {
         self.quiet = true;
         self
     }
-
-
 
     /// Pipe this command to another command.
     pub fn pipe(self, next: Cmd) -> Pipeline {
@@ -200,12 +198,17 @@ impl Cmd {
         echo = echo.sput("cmd", BRIGHT_BLACK);
 
         if let Some(cwd) = &self.cwd {
-            echo = echo.sput("cd:", BRIGHT_BLUE).sput(cwd, UNDERLINE_BRIGHT_BLUE);
+            echo = echo
+                .sput("cd:", BRIGHT_BLUE)
+                .sput(cwd, UNDERLINE_BRIGHT_BLUE);
         }
 
         for (key, val) in &self.envs {
-            echo = echo.sput("env:", BRIGHT_BLUE).sput(key, UNDERLINE_BRIGHT_BLUE)
-                      .put("=").sput(val, UNDERLINE_BRIGHT_BLUE);
+            echo = echo
+                .sput("env:", BRIGHT_BLUE)
+                .sput(key, UNDERLINE_BRIGHT_BLUE)
+                .put("=")
+                .sput(val, UNDERLINE_BRIGHT_BLUE);
         }
 
         echo = echo.sput(&self.program, BOLD_CYAN);
@@ -289,7 +292,8 @@ impl Pipeline {
             Cmd::new("cmd").arg("/C").arg(&shell_command)
         } else {
             Cmd::new("sh").arg("-c").arg(&shell_command)
-        }.quiet();
+        }
+        .quiet();
 
         // Apply environment variables from first command
         if let Some(first_cmd) = self.commands.first() {
@@ -323,12 +327,17 @@ impl Pipeline {
             }
 
             if let Some(cwd) = &cmd.cwd {
-                echo = echo.sput("cd:", BRIGHT_BLUE).sput(cwd, UNDERLINE_BRIGHT_BLUE);
+                echo = echo
+                    .sput("cd:", BRIGHT_BLUE)
+                    .sput(cwd, UNDERLINE_BRIGHT_BLUE);
             }
 
             for (key, val) in &cmd.envs {
-                echo = echo.sput("env:", BRIGHT_BLUE).sput(key, UNDERLINE_BRIGHT_BLUE)
-                          .put("=").sput(val, UNDERLINE_BRIGHT_BLUE);
+                echo = echo
+                    .sput("env:", BRIGHT_BLUE)
+                    .sput(key, UNDERLINE_BRIGHT_BLUE)
+                    .put("=")
+                    .sput(val, UNDERLINE_BRIGHT_BLUE);
             }
 
             echo = echo.sput(&cmd.program, BOLD_CYAN);

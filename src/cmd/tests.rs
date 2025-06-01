@@ -24,7 +24,7 @@ mod cmd_tests {
             .env("TEST", "value")
             .cwd("/tmp")
             .quiet();
-        
+
         assert_eq!(cmd.program, "ls");
         assert_eq!(cmd.args, vec!["-la"]);
         assert_eq!(cmd.envs, vec![("TEST".to_string(), "value".to_string())]);
@@ -40,11 +40,7 @@ mod cmd_tests {
 
     #[test]
     fn test_cmd_with_input() {
-        let output = cmd!("cat")
-            .input("hello world")
-            .quiet()
-            .output()
-            .unwrap();
+        let output = cmd!("cat").input("hello world").quiet().output().unwrap();
         assert_eq!(output.trim(), "hello world");
     }
 
@@ -78,7 +74,6 @@ mod cmd_tests {
             .unwrap();
         assert_eq!(output.trim(), "test_value");
     }
-
 
     #[test]
     fn test_error_handling() {
