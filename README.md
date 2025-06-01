@@ -1,5 +1,10 @@
 # scriptify
 
+[![Crates.io](https://img.shields.io/crates/v/scriptify.svg)](https://crates.io/crates/scriptify)
+[![Documentation](https://docs.rs/scriptify/badge.svg)](https://docs.rs/scriptify)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Build Status](https://github.com/MozkTaberenai/scriptify/workflows/CI/badge.svg)](https://github.com/MozkTaberenai/scriptify/actions)
+
 ## scriptify
 
 **Scriptify your Rust** - A simple and intuitive library that makes running shell commands and file operations easy and visible.
@@ -40,8 +45,7 @@ Currently supported platforms:
 
 ### Requirements
 
-- **Rust 1.87.0 or later** for optimal pipeline performance with `std::io::pipe`
-- **Rust 1.70.0 or later** minimum (will use fallback shell-based pipes on older versions)
+- **Rust 1.87.0 or later** - Required for native pipeline performance with `std::io::pipe`
 
 ### Basic Usage
 
@@ -332,3 +336,239 @@ We welcome contributions! Please see our [GitHub repository](https://github.com/
 This project is licensed under the MIT License.
 
 License: MIT
+
+
+## Examples
+
+The following examples are available in the `examples/` directory:
+
+### pipeline_performance
+
+```rust
+println!("Pipeline Performance Comparison");
+println!("===============================\n");
+// Test with a reasonably large dataset
+let test_data = generate_test_data(10000);
+println!("Testing with {} lines of data", test_data.lines().count());
+println!("Data size: {} bytes\n", test_data.len());
+// Test 1: Simple pipeline with native pipes
+println!("Test 1: Simple text processing pipeline");
+let start = Instant::now();
+let result1 = cmd!("tr", "[:lower:]", "[:upper:]")
+    .pipe(cmd!("sort"))
+    .pipe(cmd!("uniq", "-c"))
+    .input(&test_data)
+    .output()?;
+let duration1 = start.elapsed();
+println!("Native pipeline result: {} lines", result1.lines().count());
+println!("Time taken: {:?}\n", duration1);
+// Test 2: Memory efficiency comparison
+println!("Test 2: Memory efficiency with large data streaming");
+let large_data = generate_test_data(50000);
+let start = Instant::now();
+let result2 = cmd!("grep", "test")
+    .pipe(cmd!("wc", "-l"))
+    .input(&large_data)
+    .output()?;
+let duration2 = start.elapsed();
+println!("Large data processing result: {}", result2.trim());
+println!("Time taken: {:?}\n", duration2);
+// Test 3: Complex pipeline with multiple stages
+println!("Test 3: Complex multi-stage pipeline");
+let start = Instant::now();
+let result3 = cmd!("cat")
+    .pipe(cmd!("grep", "data"))
+    .pipe(cmd!("cut", "-d", ":", "-f", "2"))
+    .pipe(cmd!("sort", "-n"))
+    .pipe(cmd!("tail", "-5"))
+    .input(&test_data)
+    .output()?;
+let duration3 = start.elapsed();
+println!("Complex pipeline result: {} lines", result3.lines().count());
+println!("Time taken: {:?}\n", duration3);
+// Test 4: Demonstrate streaming vs buffering
+println!("Test 4: Real-time processing demonstration");
+let start = Instant::now();
+// This would process data as it comes in, not waiting for all input
+cmd!("head", "-100")
+    .pipe(cmd!("nl"))
+    .input(&test_data)
+    .run()?;
+let duration4 = start.elapsed();
+println!("Streaming processing time: {:?}\n", duration4);
+println!("Performance Summary:");
+println!("==================");
+println!("✅ Native pipes provide better memory efficiency");
+println!("✅ Reduced process overhead compared to shell delegation");
+println!("✅ True streaming processing for large datasets");
+println!("✅ Better error isolation and handling");
+println!("✅ Platform-independent implementation");
+Ok(())
+```
+
+Run with: `cargo run --example pipeline_performance`
+
+### cmd
+
+```rust
+// Basic command execution
+cmd!("echo", "Hello, World!").run()?;
+// Command with multiple arguments
+cmd!("echo").args(["a", "b", "c"]).run()?;
+// Command with environment variable
+cmd!("echo", "hello").env("USER", "alice").run()?;
+// Command with working directory
+cmd!("ls", "-la").cwd("src").run()?;
+// Get command output
+let date = cmd!("date").output()?;
+echo!("Current date:", date.trim());
+// Handle command that might fail
+if let Err(err) = cmd!("unknown_command").run() {
+    echo!("Command failed:", err);
+}
+// Command piping
+cmd!("echo", "hello world")
+    .pipe(cmd!("tr", "[:lower:]", "[:upper:]"))
+    .run()?;
+// Multiple pipes
+cmd!("date")
+    .pipe(cmd!("rev"))
+    .pipe(cmd!("tr", "[:upper:]", "[:lower:]"))
+    .run()?;
+// Pipe with input
+let result = cmd!("tr", "[:lower:]", "[:upper:]")
+    .input("hello world")
+    .output()?;
+echo!("Uppercase:", result.trim());
+// Pipeline with input
+let result = cmd!("sort")
+    .pipe(cmd!("uniq"))
+    .input("apple\nbanana\napple\ncherry\nbanana")
+    .output()?;
+echo!("Unique fruits:", result.trim());
+// Quiet execution (no echo)
+cmd!("echo", "This won't be echoed").quiet().run()?;
+Ok(())
+```
+
+Run with: `cargo run --example cmd`
+
+### fs
+
+```rust
+fs::create_dir("tmp")?;
+fs::write("tmp/a.txt", "abc")?;
+show_metadata("tmp/a.txt")?;
+fs::copy("tmp/a.txt", "tmp/b.txt")?;
+show_metadata("tmp/b.txt")?;
+fs::hard_link("tmp/a.txt", "tmp/h.txt")?;
+show_metadata("tmp/h.txt")?;
+fs::rename("tmp/a.txt", "tmp/c.txt")?;
+show_metadata("tmp/c.txt")?;
+fs::create_dir_all("tmp/d/e")?;
+for entry in fs::read_dir("tmp")? {
+    show_metadata(entry?.path())?;
+}
+fs::remove_file("tmp/b.txt")?;
+fs::remove_dir("tmp/d/e")?;
+fs::remove_dir_all("tmp")?;
+Ok(())
+```
+
+Run with: `cargo run --example fs`
+
+### pipe_modes
+
+```rust
+println!("=== Pipe Mode Examples ===\n");
+// Example 1: Default stdout piping
+println!("1. Default stdout piping:");
+let output = cmd!("echo", "hello world")
+    .pipe(cmd!("tr", "[:lower:]", "[:upper:]"))
+    .output()?;
+println!("   Output: {}", output.trim());
+println!();
+// Example 2: Stderr piping
+println!("2. Stderr piping:");
+println!("   Command: Generate error message and count its characters");
+let error_char_count = cmd!("sh", "-c", "echo 'Error: Something went wrong!' >&2")
+    .pipe(cmd!("wc", "-c"))
+    .pipe_stderr()
+    .output()?;
+println!(
+    "   Error message character count: {}",
+    error_char_count.trim()
+);
+println!();
+// Example 3: Both stdout and stderr piping
+println!("3. Combined stdout+stderr piping:");
+println!("   Command: Generate both outputs and sort them together");
+let combined_output = cmd!("sh", "-c", "echo 'stdout line'; echo 'stderr line' >&2")
+    .pipe(cmd!("sort"))
+    .pipe_both()
+    .output()?;
+println!("   Combined and sorted output:");
+for line in combined_output.lines() {
+    println!("     {}", line);
+}
+println!();
+// Example 4: Using PipeMode explicitly
+println!("4. Explicit pipe mode setting:");
+let explicit_output = cmd!("echo", "test data")
+    .pipe(cmd!("cat"))
+    .pipe_mode(PipeMode::Stdout)
+    .output()?;
+println!("   Explicit stdout mode: {}", explicit_output.trim());
+println!();
+// Example 5: Error processing pipeline
+println!("5. Error processing pipeline:");
+println!("   Command: Generate multiple error lines and count them");
+let error_lines = cmd!(
+    "sh",
+    "-c",
+    "echo 'ERROR 1' >&2; echo 'ERROR 2' >&2; echo 'ERROR 3' >&2"
+)
+.pipe(cmd!("wc", "-l"))
+.pipe_stderr()
+.output()?;
+println!("   Number of error lines: {}", error_lines.trim());
+println!();
+// Example 6: Complex stderr processing
+println!("6. Complex stderr processing:");
+println!("   Command: Filter specific errors from stderr");
+let filtered_errors = cmd!(
+    "sh",
+    "-c",
+    "echo 'INFO: starting' >&2; echo 'ERROR: failed' >&2; echo 'INFO: done' >&2"
+)
+.pipe(cmd!("grep", "ERROR"))
+.pipe_stderr()
+.output()?;
+println!("   Filtered errors: {}", filtered_errors.trim());
+Ok(())
+```
+
+Run with: `cargo run --example pipe_modes`
+
+
+## Development
+
+This project uses `cargo xtask` for development tasks:
+
+```bash
+# Generate README.md
+cargo xtask readme
+
+# Run all tests
+cargo xtask test
+
+# Run code formatting
+cargo xtask fmt
+
+# Run clippy lints
+cargo xtask clippy
+
+# Run full CI pipeline
+cargo xtask ci
+```
+

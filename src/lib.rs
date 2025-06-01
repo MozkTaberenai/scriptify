@@ -38,8 +38,7 @@
 //!
 //! ## Requirements
 //!
-//! - **Rust 1.87.0 or later** for optimal pipeline performance with `std::io::pipe`
-//! - **Rust 1.70.0 or later** minimum (will use fallback shell-based pipes on older versions)
+//! - **Rust 1.87.0 or later** - Required for native pipeline performance with `std::io::pipe`
 //!
 //! ## Basic Usage
 //!
