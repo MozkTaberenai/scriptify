@@ -55,7 +55,6 @@ path = "examples/02_intermediate/pipe_modes.rs"
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
-targets = ["x86_64-unknown-linux-gnu", "x86_64-apple-darwin"]
 
 [package.metadata.readme]
 readme-path = "README.md"
