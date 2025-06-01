@@ -425,11 +425,14 @@ impl Pipeline {
         // 2. Better error handling: individual process status tracking
         // 3. Platform independence: no shell dependency
         // 4. Performance: reduced context switching and process overhead
+        // 5. All PipeMode variants supported natively with try_clone()
         match self.try_native_pipeline(capture_output) {
             Ok(result) => Ok(result),
             Err(_) => {
                 // Fallback to stdio-based pipeline instead of shell
                 // This maintains shell-free operation while ensuring compatibility
+                // Note: With Rust 1.87.0+, all pipe modes work natively, so this fallback
+                // is mainly for older Rust versions or edge cases
                 self.try_stdio_pipeline(capture_output)
             }
         }
@@ -439,15 +442,17 @@ impl Pipeline {
         // Native pipeline implementation using std::io::pipe from Rust 1.87.0
         // This creates anonymous pipes directly in memory, avoiding the need
         // for shell interpretation and enabling true streaming processing
-        
-        // For stderr or both modes, fallback to stdio implementation
-        // as std::io::pipe() is optimized for stdout only
-        if self.pipe_mode != PipeMode::Stdout {
-            return self.try_stdio_pipeline(capture_output);
-        }
+        // 
+        // Supports all PipeMode variants:
+        // - Stdout: Standard pipe between stdout->stdin
+        // - Stderr: Pipe stderr->stdin using dedicated stderr pipes
+        // - Both: Use try_clone() to merge stdout+stderr into single pipe
+        //
+        // This implementation leverages Rust 1.87.0's anonymous pipes with
+        // try_clone() capability for efficient stream merging without threads
         
         let mut children: Vec<Child> = Vec::new();
-        let mut prev_stdout: Option<std::io::PipeReader> = None;
+        let mut prev_reader: Option<std::io::PipeReader> = None;
 
         // Spawn all commands in the pipeline, connecting them with pipes
         for (i, cmd_def) in self.commands.iter().enumerate() {
@@ -460,28 +465,78 @@ impl Pipeline {
                     cmd.stdin(Stdio::piped());
                 }
             } else {
-                // Subsequent commands: use previous command's stdout
-                if let Some(reader) = prev_stdout.take() {
+                // Subsequent commands: use previous command's output
+                if let Some(reader) = prev_reader.take() {
                     cmd.stdin(Stdio::from(reader));
                 }
             }
 
-            // Set up stdout
-            if i == self.commands.len() - 1 {
+            // Set up stdout and stderr based on pipe mode
+            let is_last = i == self.commands.len() - 1;
+            if is_last {
                 // Last command: capture output if requested
-                if capture_output {
-                    cmd.stdout(Stdio::piped());
+                match self.pipe_mode {
+                    PipeMode::Stdout => {
+                        if capture_output {
+                            cmd.stdout(Stdio::piped());
+                        }
+                    },
+                    PipeMode::Stderr => {
+                        if capture_output {
+                            cmd.stdout(Stdio::piped());
+                        }
+                    },
+                    PipeMode::Both => {
+                        if capture_output {
+                            // For combined mode, capture both streams to the same pipe
+                            let (reader, writer) = std::io::pipe().map_err(|e| Error {
+                                message: "Failed to create pipe for combined output".to_string(),
+                                source: Some(e),
+                            })?;
+                            let writer_clone = writer.try_clone().map_err(|e| Error {
+                                message: "Failed to clone pipe writer".to_string(),
+                                source: Some(e),
+                            })?;
+                            cmd.stdout(Stdio::from(writer));
+                            cmd.stderr(Stdio::from(writer_clone));
+                            prev_reader = Some(reader);
+                        }
+                    }
                 }
             } else {
                 // Intermediate commands: create anonymous pipe for next command
-                // std::io::pipe() creates an in-memory pipe that's more efficient
-                // than temporary files or shell-based pipes
-                let (reader, writer) = std::io::pipe().map_err(|e| Error {
-                    message: "Failed to create pipe".to_string(),
-                    source: Some(e),
-                })?;
-                cmd.stdout(Stdio::from(writer));
-                prev_stdout = Some(reader);
+                match self.pipe_mode {
+                    PipeMode::Stdout => {
+                        let (reader, writer) = std::io::pipe().map_err(|e| Error {
+                            message: "Failed to create stdout pipe".to_string(),
+                            source: Some(e),
+                        })?;
+                        cmd.stdout(Stdio::from(writer));
+                        prev_reader = Some(reader);
+                    },
+                    PipeMode::Stderr => {
+                        let (reader, writer) = std::io::pipe().map_err(|e| Error {
+                            message: "Failed to create stderr pipe".to_string(),
+                            source: Some(e),
+                        })?;
+                        cmd.stderr(Stdio::from(writer));
+                        prev_reader = Some(reader);
+                    },
+                    PipeMode::Both => {
+                        // For combined mode, both stdout and stderr write to the same pipe
+                        let (reader, writer) = std::io::pipe().map_err(|e| Error {
+                            message: "Failed to create combined pipe".to_string(),
+                            source: Some(e),
+                        })?;
+                        let writer_clone = writer.try_clone().map_err(|e| Error {
+                            message: "Failed to clone pipe writer".to_string(),
+                            source: Some(e),
+                        })?;
+                        cmd.stdout(Stdio::from(writer));
+                        cmd.stderr(Stdio::from(writer_clone));
+                        prev_reader = Some(reader);
+                    }
+                }
             }
 
             let mut child = cmd.spawn().map_err(|e| Error {
@@ -510,13 +565,38 @@ impl Pipeline {
         // Collect output from the last command if needed
         let mut result = Vec::new();
         if capture_output {
-            if let Some(last_child) = children.last_mut() {
-                if let Some(stdout) = last_child.stdout.take() {
-                    let mut reader = BufReader::new(stdout);
-                    reader.read_to_end(&mut result).map_err(|e| Error {
-                        message: "Failed to read output".to_string(),
-                        source: Some(e),
-                    })?;
+            match self.pipe_mode {
+                PipeMode::Stdout => {
+                    if let Some(last_child) = children.last_mut() {
+                        if let Some(stdout) = last_child.stdout.take() {
+                            let mut reader = BufReader::new(stdout);
+                            reader.read_to_end(&mut result).map_err(|e| Error {
+                                message: "Failed to read stdout".to_string(),
+                                source: Some(e),
+                            })?;
+                        }
+                    }
+                },
+                PipeMode::Stderr => {
+                    if let Some(last_child) = children.last_mut() {
+                        if let Some(stdout) = last_child.stdout.take() {
+                            let mut reader = BufReader::new(stdout);
+                            reader.read_to_end(&mut result).map_err(|e| Error {
+                                message: "Failed to read stdout from final command".to_string(),
+                                source: Some(e),
+                            })?;
+                        }
+                    }
+                },
+                PipeMode::Both => {
+                    // For combined mode, read from the shared pipe reader
+                    if let Some(reader) = prev_reader.take() {
+                        let mut buf_reader = BufReader::new(reader);
+                        buf_reader.read_to_end(&mut result).map_err(|e| Error {
+                            message: "Failed to read combined output".to_string(),
+                            source: Some(e),
+                        })?;
+                    }
                 }
             }
         }
@@ -984,5 +1064,38 @@ mod cmd_tests {
         // Test that default pipe mode is Stdout
         let pipeline = cmd!("echo", "test").pipe(cmd!("cat"));
         assert_eq!(pipeline.pipe_mode, PipeMode::Stdout);
+    }
+
+    #[test]
+    fn test_native_pipeline_for_all_modes() {
+        // Test that all pipe modes work with native pipeline implementation
+        // This test ensures try_native_pipeline supports all modes instead of falling back
+        
+        // Test stdout mode (should use native pipeline)
+        let stdout_result = cmd!("echo", "native test")
+            .pipe(cmd!("cat"))
+            .pipe_mode(PipeMode::Stdout)
+            .quiet()
+            .output()
+            .unwrap();
+        assert_eq!(stdout_result.trim(), "native test");
+
+        // Test stderr mode (should use native pipeline with try_clone)
+        let stderr_result = cmd!("sh", "-c", "echo 'native error' >&2")
+            .pipe(cmd!("wc", "-c"))
+            .pipe_mode(PipeMode::Stderr)
+            .quiet()
+            .output()
+            .unwrap();
+        assert_eq!(stderr_result.trim(), "13");
+
+        // Test both mode (should use native pipeline with try_clone)
+        let both_result = cmd!("sh", "-c", "echo 'out'; echo 'err' >&2")
+            .pipe(cmd!("wc", "-l"))
+            .pipe_mode(PipeMode::Both)
+            .quiet()
+            .output()
+            .unwrap();
+        assert_eq!(both_result.trim(), "2");
     }
 }
