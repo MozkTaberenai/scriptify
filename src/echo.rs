@@ -168,7 +168,7 @@ mod tests {
         // Second argument (space prefix)
         write!(&mut output, " world").unwrap();
         // End with newline
-        write!(&mut output, "\n").unwrap();
+        writeln!(&mut output).unwrap();
         
         assert_eq!(output, "hello world\n");
         
@@ -274,7 +274,7 @@ mod tests {
     #[test]
     fn test_echo_macro_mixed_types() {
         // Test macro with mixed argument types
-        echo!("string", 42, true, 3.14);
+        echo!("string", 42, true, 2.71);
         echo!("count:", 100, "active:", false);
     }
 
