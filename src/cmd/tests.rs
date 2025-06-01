@@ -51,6 +51,154 @@ fn test_cmd_with_input() {
 }
 
 #[test]
+fn test_quote_argument_simple() {
+    let arg = OsString::from("simple");
+    let quoted = Cmd::quote_argument(&arg);
+    assert_eq!(quoted, "simple");
+}
+
+#[test]
+fn test_quote_argument_with_spaces() {
+    let arg = OsString::from("hello world");
+    let quoted = Cmd::quote_argument(&arg);
+    assert_eq!(quoted, "'hello world'");
+}
+
+#[test]
+fn test_quote_argument_empty() {
+    let arg = OsString::from("");
+    let quoted = Cmd::quote_argument(&arg);
+    assert_eq!(quoted, "\"\"");
+}
+
+#[test]
+fn test_quote_argument_with_single_quotes() {
+    let arg = OsString::from("it's a test");
+    let quoted = Cmd::quote_argument(&arg);
+    assert_eq!(quoted, "\"it's a test\"");
+}
+
+#[test]
+fn test_quote_argument_with_double_quotes() {
+    let arg = OsString::from("say \"hello\"");
+    let quoted = Cmd::quote_argument(&arg);
+    assert_eq!(quoted, "'say \"hello\"'");
+}
+
+#[test]
+fn test_quote_argument_with_mixed_quotes() {
+    let arg = OsString::from("it's a \"test\"");
+    let quoted = Cmd::quote_argument(&arg);
+    assert_eq!(quoted, "\"it's a \\\"test\\\"\"");
+}
+
+#[test]
+fn test_quote_argument_with_various_characters() {
+    let test_cases = vec![
+        ("file*.txt", "file*.txt"),
+        ("$HOME/test", "$HOME/test"),
+        ("command|grep", "command|grep"),
+        ("arg&background", "arg&background"),
+        ("path;command", "path;command"),
+        ("(group)", "(group)"),
+        ("redirect>file", "redirect>file"),
+        ("[pattern]", "[pattern]"),
+        ("{expansion}", "{expansion}"),
+        ("back`tick", "back`tick"),
+        ("hash#comment", "hash#comment"),
+        ("exclaim!", "exclaim!"),
+        ("tilde~path", "tilde~path"),
+    ];
+
+    for (input, expected) in test_cases {
+        let arg = OsString::from(input);
+        let quoted = Cmd::quote_argument(&arg);
+        assert_eq!(quoted, expected, "Failed for input: {}", input);
+    }
+}
+
+#[test]
+fn test_quote_argument_with_control_characters() {
+    let arg = OsString::from("line1\nline2");
+    let quoted = Cmd::quote_argument(&arg);
+    assert_eq!(quoted, "'line1\\nline2'");
+
+    let arg = OsString::from("tab\there");
+    let quoted = Cmd::quote_argument(&arg);
+    assert_eq!(quoted, "'tab\\there'");
+}
+
+#[test]
+fn test_quote_argument_with_backslash_and_quotes() {
+    let arg = OsString::from("path\\with\"quotes");
+    let quoted = Cmd::quote_argument(&arg);
+    assert_eq!(quoted, "'path\\with\"quotes'");
+}
+
+#[test]
+fn test_quote_argument_with_dollar_and_backtick() {
+    let arg = OsString::from("$VAR and `command`");
+    let quoted = Cmd::quote_argument(&arg);
+    assert_eq!(quoted, "'$VAR and `command`'");
+}
+
+#[test]
+fn test_quote_argument_complex_escaping() {
+    // Test case with single quotes that requires double quote escaping
+    let arg = OsString::from("can't use $HOME or `pwd`");
+    let quoted = Cmd::quote_argument(&arg);
+    assert_eq!(quoted, "\"can't use $HOME or `pwd`\"");
+}
+
+#[test]
+fn test_quote_argument_with_mixed_control_chars() {
+    let arg = OsString::from("line1\nhas\ttabs\rand\0null");
+    let quoted = Cmd::quote_argument(&arg);
+    assert_eq!(quoted, "'line1\\nhas\\ttabs\\rand\\0null'");
+}
+
+#[test]
+fn test_quote_argument_single_quotes_with_control_chars() {
+    let arg = OsString::from("can't\nuse\ttabs");
+    let quoted = Cmd::quote_argument(&arg);
+    assert_eq!(quoted, "\"can't\\nuse\\ttabs\"");
+}
+
+#[test]
+fn test_quote_argument_complex_control_combinations() {
+    // Test null character
+    let arg = OsString::from("test\0null");
+    let quoted = Cmd::quote_argument(&arg);
+    assert_eq!(quoted, "'test\\0null'");
+
+    // Test carriage return
+    let arg = OsString::from("windows\r\nline");
+    let quoted = Cmd::quote_argument(&arg);
+    assert_eq!(quoted, "'windows\\r\\nline'");
+
+    // Test bell character (control character)
+    let arg = OsString::from("bell\x07char");
+    let quoted = Cmd::quote_argument(&arg);
+    assert_eq!(quoted, "'bell\\x07char'");
+
+    // Test DEL character
+    let arg = OsString::from("del\x7fchar");
+    let quoted = Cmd::quote_argument(&arg);
+    assert_eq!(quoted, "'del\\x7fchar'");
+}
+
+#[test]
+fn test_quote_argument_mixed_everything() {
+    // Test argument with single quotes, control chars, and regular text
+    let arg = OsString::from("can't handle\tthis\ncomplex 'string' with\0null");
+    let quoted = Cmd::quote_argument(&arg);
+    assert_eq!(
+        quoted,
+        "\"can't handle\\tthis\\ncomplex 'string' with\\0null\""
+    );
+}
+
+#[test]
 fn test_pipeline() {
     let output = cmd!("echo", "hello")
         .pipe(cmd!("tr", "[:lower:]", "[:upper:]"))

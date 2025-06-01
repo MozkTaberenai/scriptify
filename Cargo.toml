@@ -38,22 +38,28 @@ path = "examples/01_basics/simple_fs.rs"
 
 # 02_intermediate - Intermediate examples
 [[example]]
-name = "error_handling"
-path = "examples/02_intermediate/error_handling.rs"
-[[example]]
 name = "environment"
 path = "examples/02_intermediate/environment.rs"
 [[example]]
-name = "complex_pipes"
-path = "examples/02_intermediate/complex_pipes.rs"
+name = "error_handling"
+path = "examples/02_intermediate/error_handling.rs"
 [[example]]
 name = "pipe_modes"
 path = "examples/02_intermediate/pipe_modes.rs"
+[[example]]
+name = "mixed_pipe_modes"
+path = "examples/02_intermediate/mixed_pipe_modes.rs"
 
 # 03_advanced - Advanced examples
 [[example]]
-name = "mixed_pipe_modes"
-path = "examples/03_advanced/mixed_pipe_modes.rs"
+name = "complex_pipes"
+path = "examples/03_advanced/complex_pipes.rs"
+[[example]]
+name = "command_quoting"
+path = "examples/03_advanced/command_quoting.rs"
+[[example]]
+name = "control_char_demo"
+path = "examples/03_advanced/control_char_demo.rs"
 
 
 [package.metadata.docs.rs]

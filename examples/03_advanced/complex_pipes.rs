@@ -146,7 +146,7 @@ fn pipeline_error_handling() -> Result<()> {
             }
         }
         Err(e) => {
-            println!("❌ Pipeline failed: {}", e);
+            echo!("❌ Pipeline failed:", e);
             echo!("🔄 Attempting recovery with simpler approach");
 
             // Fallback pipeline

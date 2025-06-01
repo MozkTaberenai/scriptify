@@ -13,6 +13,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved code organization and readability by splitting implementation and tests
 
 ### Added
+- **Command argument quoting** for improved readability in command echo output
+  - Automatic quoting of arguments containing spaces, quotes, or control characters
+  - Control character escaping (e.g., `\t`, `\n`, `\r`) for better visibility
+  - Smart quoting strategy: single quotes for simple cases, double quotes with escaping for complex cases
+- **Enhanced command echo display** with proper argument formatting
+- **Control character demonstration** example showing escaping functionality
+
+### Changed
+- **Examples reorganization** for better learning progression:
+  - Moved `mixed_pipe_modes.rs` from advanced to intermediate (logical grouping with `pipe_modes.rs`)
+  - Moved `complex_pipes.rs` from intermediate to advanced (more appropriate difficulty level)
+  - Consolidated advanced examples in single `03_advanced/` directory
+  - Updated documentation to reflect new example structure
 - Initial release of scriptify
 - `cmd!` macro for easy command execution
 - Command piping with `.pipe()` method
