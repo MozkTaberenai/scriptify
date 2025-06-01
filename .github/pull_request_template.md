@@ -33,7 +33,7 @@ Brief description of what this PR does.
   - [ ] Documentation builds (`cargo doc`)
   - [ ] README updated (`cargo xtask readme`)
 - [ ] ✅ MSRV compatibility (Rust 1.87.0+)
-- [ ] ✅ Cross-platform compatibility (Linux, macOS, Windows)
+- [ ] ✅ Cross-platform compatibility (Linux, macOS)
 
 ## Breaking Changes
 
@@ -52,9 +52,8 @@ Brief description of what this PR does.
 ## Platform Support
 
 - [ ] Tested on Linux
-- [ ] Tested on macOS  
-- [ ] Tested on Windows
-- [ ] No platform-specific changes
+- [ ] Tested on macOS
+- [ ] No platform-specific changes (Unix-compatible only)
 
 ## Additional Notes
 
