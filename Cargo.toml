@@ -49,7 +49,10 @@ path = "examples/02_intermediate/complex_pipes.rs"
 name = "pipe_modes"
 path = "examples/02_intermediate/pipe_modes.rs"
 
-
+# 03_advanced - Advanced examples
+[[example]]
+name = "mixed_pipe_modes"
+path = "examples/03_advanced/mixed_pipe_modes.rs"
 
 
 [package.metadata.docs.rs]

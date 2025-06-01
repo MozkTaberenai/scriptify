@@ -27,8 +27,7 @@ fn main() -> Result<()> {
     echo!("2. Stderr piping:");
     echo!("   Command: Generate error message and count its characters");
     let error_char_count = cmd!("sh", "-c", "echo 'Error: Something went wrong!' >&2")
-        .pipe(cmd!("wc", "-c"))
-        .pipe_stderr()
+        .pipe_stderr(cmd!("wc", "-c"))
         .output()?;
     echo!("   Error message character count:", error_char_count.trim());
     echo!();
@@ -37,8 +36,7 @@ fn main() -> Result<()> {
     echo!("3. Combined stdout+stderr piping:");
     echo!("   Command: Generate both outputs and sort them together");
     let combined_output = cmd!("sh", "-c", "echo 'stdout line'; echo 'stderr line' >&2")
-        .pipe(cmd!("sort"))
-        .pipe_both()
+        .pipe_both(cmd!("sort"))
         .output()?;
     echo!("   Combined and sorted output:");
     for line in combined_output.lines() {
@@ -46,13 +44,13 @@ fn main() -> Result<()> {
     }
     echo!();
 
-    // Example 4: Using PipeMode explicitly
-    echo!("4. Explicit pipe mode setting:");
-    let explicit_output = cmd!("echo", "test data")
+    // Example 4: Mixed pipe modes in a single pipeline
+    echo!("4. Mixed pipe modes in a single pipeline:");
+    let mixed_output = cmd!("sh", "-c", "echo 'stdout'; echo 'stderr' >&2")
+        .pipe_stderr(cmd!("sed", "s/stderr/processed_stderr/"))
         .pipe(cmd!("cat"))
-        .pipe_mode(PipeMode::Stdout)
         .output()?;
-    echo!("   Explicit stdout mode:", explicit_output.trim());
+    echo!("   Mixed pipeline output:", mixed_output.trim());
     echo!();
 
     // Example 5: Error processing pipeline
@@ -63,8 +61,7 @@ fn main() -> Result<()> {
         "-c",
         "echo 'ERROR 1' >&2; echo 'ERROR 2' >&2; echo 'ERROR 3' >&2"
     )
-    .pipe(cmd!("wc", "-l"))
-    .pipe_stderr()
+    .pipe_stderr(cmd!("wc", "-l"))
     .output()?;
     echo!("   Number of error lines:", error_lines.trim());
     echo!();
@@ -77,8 +74,7 @@ fn main() -> Result<()> {
         "-c",
         "echo 'INFO: starting' >&2; echo 'ERROR: failed' >&2; echo 'INFO: done' >&2"
     )
-    .pipe(cmd!("grep", "ERROR"))
-    .pipe_stderr()
+    .pipe_stderr(cmd!("grep", "ERROR"))
     .output()?;
     echo!("   Filtered errors:", filtered_errors.trim());
 
