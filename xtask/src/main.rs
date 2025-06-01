@@ -25,6 +25,10 @@ fn main() -> Result<()> {
 
     if args.len() < 2 {
         echo!("Usage: cargo xtask <task>");
+        echo!("");
+        echo!("⚠️  IMPORTANT: README.md is auto-generated from src/lib.rs");
+        echo!("   To update README.md: edit src/lib.rs and run 'cargo xtask readme'");
+        echo!("");
         echo!("Available tasks:");
         echo!("  readme    - Generate README.md from lib.rs documentation");
         echo!("  docs      - Generate and open documentation");
@@ -36,6 +40,8 @@ fn main() -> Result<()> {
         echo!("  bench     - Run benchmarks");
         echo!("  coverage  - Generate test coverage report");
         echo!("  ci        - Run all CI tasks");
+        echo!("");
+        echo!("Before committing: cargo xtask ci");
         return Ok(());
     }
 
