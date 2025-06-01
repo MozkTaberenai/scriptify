@@ -1,9 +1,11 @@
 use super::*;
+use std::ffi::OsString;
+use std::path::PathBuf;
 
 #[test]
 fn test_cmd_new() {
     let cmd = Cmd::new("echo");
-    assert_eq!(cmd.program, "echo");
+    assert_eq!(cmd.program, OsString::from("echo"));
     assert!(cmd.args.is_empty());
     assert!(!cmd.quiet);
 }
@@ -11,8 +13,8 @@ fn test_cmd_new() {
 #[test]
 fn test_cmd_with_args() {
     let cmd = cmd!("echo", "hello", "world");
-    assert_eq!(cmd.program, "echo");
-    assert_eq!(cmd.args, vec!["hello", "world"]);
+    assert_eq!(cmd.program, OsString::from("echo"));
+    assert_eq!(cmd.args, vec![OsString::from("hello"), OsString::from("world")]);
 }
 
 #[test]
@@ -23,10 +25,10 @@ fn test_cmd_builder() {
         .cwd("/tmp")
         .quiet();
 
-    assert_eq!(cmd.program, "ls");
-    assert_eq!(cmd.args, vec!["-la"]);
-    assert_eq!(cmd.envs, vec![("TEST".to_string(), "value".to_string())]);
-    assert_eq!(cmd.cwd, Some("/tmp".to_string()));
+    assert_eq!(cmd.program, OsString::from("ls"));
+    assert_eq!(cmd.args, vec![OsString::from("-la")]);
+    assert_eq!(cmd.envs, vec![(OsString::from("TEST"), OsString::from("value"))]);
+    assert_eq!(cmd.cwd, Some(PathBuf::from("/tmp")));
     assert!(cmd.quiet);
 }
 
@@ -288,35 +290,35 @@ fn test_long_mixed_pipeline() {
 fn test_cmd_parse() {
     // Test basic parsing
     let cmd = Cmd::parse("echo hello world");
-    assert_eq!(cmd.program, "echo");
-    assert_eq!(cmd.args, vec!["hello", "world"]);
+    assert_eq!(cmd.program, OsString::from("echo"));
+    assert_eq!(cmd.args, vec![OsString::from("hello"), OsString::from("world")]);
 
     // Test parsing with multiple spaces
     let cmd = Cmd::parse("ls  -la   /tmp");
-    assert_eq!(cmd.program, "ls");
-    assert_eq!(cmd.args, vec!["-la", "/tmp"]);
+    assert_eq!(cmd.program, OsString::from("ls"));
+    assert_eq!(cmd.args, vec![OsString::from("-la"), OsString::from("/tmp")]);
 
     // Test empty string
     let cmd = Cmd::parse("");
-    assert_eq!(cmd.program, "");
+    assert_eq!(cmd.program, OsString::from(""));
     assert!(cmd.args.is_empty());
 
     // Test single word
     let cmd = Cmd::parse("pwd");
-    assert_eq!(cmd.program, "pwd");
+    assert_eq!(cmd.program, OsString::from("pwd"));
     assert!(cmd.args.is_empty());
 
     // Test with leading/trailing whitespace
     let cmd = Cmd::parse("  echo test  ");
-    assert_eq!(cmd.program, "echo");
-    assert_eq!(cmd.args, vec!["test"]);
+    assert_eq!(cmd.program, OsString::from("echo"));
+    assert_eq!(cmd.args, vec![OsString::from("test")]);
 }
 
 #[test]
 fn test_empty_command_handling() {
     // Test empty program name
     let cmd = Cmd::new("");
-    assert_eq!(cmd.program, "");
+    assert_eq!(cmd.program, OsString::from(""));
     let result = cmd.quiet().run();
     assert!(result.is_err());
 }
@@ -372,7 +374,7 @@ fn test_multiple_environment_variables() {
 fn test_args_method() {
     // Test adding multiple arguments at once
     let cmd = Cmd::new("ls").args(vec!["-l", "-a", "-h"]);
-    assert_eq!(cmd.args, vec!["-l", "-a", "-h"]);
+    assert_eq!(cmd.args, vec![OsString::from("-l"), OsString::from("-a"), OsString::from("-h")]);
 
     // Test with empty iterator
     let cmd = Cmd::new("echo").args(Vec::<&str>::new());
@@ -575,12 +577,12 @@ fn test_builder_pattern_completeness() {
         .input("test input")
         .quiet();
 
-    assert_eq!(cmd.program, "test_program");
-    assert_eq!(cmd.args, vec!["arg1", "arg2", "arg3"]);
+    assert_eq!(cmd.program, OsString::from("test_program"));
+    assert_eq!(cmd.args, vec![OsString::from("arg1"), OsString::from("arg2"), OsString::from("arg3")]);
     assert_eq!(cmd.envs.len(), 2);
-    assert_eq!(cmd.envs[0], ("VAR1".to_string(), "value1".to_string()));
-    assert_eq!(cmd.envs[1], ("VAR2".to_string(), "value2".to_string()));
-    assert_eq!(cmd.cwd, Some("/tmp".to_string()));
+    assert_eq!(cmd.envs[0], (OsString::from("VAR1"), OsString::from("value1")));
+    assert_eq!(cmd.envs[1], (OsString::from("VAR2"), OsString::from("value2")));
+    assert_eq!(cmd.cwd, Some(PathBuf::from("/tmp")));
     assert_eq!(cmd.input, Some("test input".to_string()));
     assert!(cmd.quiet);
 }
