@@ -163,7 +163,8 @@ impl Cmd {
 
     /// Set an environment variable.
     pub fn env(mut self, key: impl AsRef<OsStr>, val: impl AsRef<OsStr>) -> Self {
-        self.envs.push((key.as_ref().to_os_string(), val.as_ref().to_os_string()));
+        self.envs
+            .push((key.as_ref().to_os_string(), val.as_ref().to_os_string()));
         self
     }
 
@@ -281,7 +282,10 @@ impl Cmd {
         }
 
         let mut child = cmd.spawn().map_err(|e| Error {
-            message: format!("Failed to spawn command: {}", self.program.to_string_lossy()),
+            message: format!(
+                "Failed to spawn command: {}",
+                self.program.to_string_lossy()
+            ),
             source: Some(e),
         })?;
 
@@ -319,21 +323,21 @@ impl Cmd {
         if let Some(cwd) = &self.cwd {
             echo = echo
                 .sput("cd:", BRIGHT_BLUE)
-                .sput(&cwd.to_string_lossy(), UNDERLINE_BRIGHT_BLUE);
+                .sput(cwd.to_string_lossy(), UNDERLINE_BRIGHT_BLUE);
         }
 
         for (key, val) in &self.envs {
             echo = echo
                 .sput("env:", BRIGHT_BLUE)
-                .sput(&key.to_string_lossy(), UNDERLINE_BRIGHT_BLUE)
+                .sput(key.to_string_lossy(), UNDERLINE_BRIGHT_BLUE)
                 .put("=")
-                .sput(&val.to_string_lossy(), UNDERLINE_BRIGHT_BLUE);
+                .sput(val.to_string_lossy(), UNDERLINE_BRIGHT_BLUE);
         }
 
-        echo = echo.sput(&self.program.to_string_lossy(), BOLD_CYAN);
+        echo = echo.sput(self.program.to_string_lossy(), BOLD_CYAN);
 
         for arg in &self.args {
-            echo = echo.sput(&arg.to_string_lossy(), BOLD_UNDERLINE);
+            echo = echo.sput(arg.to_string_lossy(), BOLD_UNDERLINE);
         }
 
         echo.end();
@@ -494,7 +498,10 @@ impl Pipeline {
             }
 
             let mut child = cmd.spawn().map_err(|e| Error {
-                message: format!("Failed to spawn command: {}", cmd_def.program.to_string_lossy()),
+                message: format!(
+                    "Failed to spawn command: {}",
+                    cmd_def.program.to_string_lossy()
+                ),
                 source: Some(e),
             })?;
 
@@ -580,21 +587,21 @@ impl Pipeline {
             if let Some(cwd) = &cmd.cwd {
                 echo = echo
                     .sput("cd:", BRIGHT_BLUE)
-                    .sput(&cwd.to_string_lossy(), UNDERLINE_BRIGHT_BLUE);
+                    .sput(cwd.to_string_lossy(), UNDERLINE_BRIGHT_BLUE);
             }
 
             for (key, val) in &cmd.envs {
                 echo = echo
                     .sput("env:", BRIGHT_BLUE)
-                    .sput(&key.to_string_lossy(), UNDERLINE_BRIGHT_BLUE)
+                    .sput(key.to_string_lossy(), UNDERLINE_BRIGHT_BLUE)
                     .put("=")
-                    .sput(&val.to_string_lossy(), UNDERLINE_BRIGHT_BLUE);
+                    .sput(val.to_string_lossy(), UNDERLINE_BRIGHT_BLUE);
             }
 
-            echo = echo.sput(&cmd.program.to_string_lossy(), BOLD_CYAN);
+            echo = echo.sput(cmd.program.to_string_lossy(), BOLD_CYAN);
 
             for arg in &cmd.args {
-                echo = echo.sput(&arg.to_string_lossy(), BOLD_UNDERLINE);
+                echo = echo.sput(arg.to_string_lossy(), BOLD_UNDERLINE);
             }
         }
 
