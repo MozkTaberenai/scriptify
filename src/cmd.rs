@@ -18,12 +18,63 @@ pub struct Cmd {
     quiet: bool,
 }
 
+/// Specifies which output streams should be piped between commands.
+/// 
+/// This enum controls how data flows between commands in a pipeline:
+/// - **Between commands**: Determines which streams are connected
+/// - **Final output**: The last command's stdout is captured unless specified otherwise
+/// 
+/// # Examples
+/// 
+/// ```no_run
+/// use scriptify::{cmd, PipeMode};
+/// 
+/// // Pipe stdout (default)
+/// let output = cmd!("echo", "hello")
+///     .pipe(cmd!("tr", "[:lower:]", "[:upper:]"))
+///     .output()?;
+/// 
+/// // Pipe stderr between commands
+/// let output = cmd!("command-with-errors")
+///     .pipe(cmd!("grep", "ERROR"))
+///     .pipe_stderr()
+///     .output()?;
+/// 
+/// // Pipe both stdout and stderr
+/// let output = cmd!("command-with-mixed-output")
+///     .pipe(cmd!("sort"))
+///     .pipe_both()
+///     .output()?;
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum PipeMode {
+    /// Pipe only stdout between commands (default behavior).
+    /// 
+    /// This is the standard Unix pipe behavior where each command's stdout
+    /// becomes the next command's stdin.
+    Stdout,
+    
+    /// Pipe only stderr between commands.
+    /// 
+    /// Each command's stderr becomes the next command's stdin, while stdout
+    /// is not connected between commands. Useful for error processing pipelines.
+    Stderr,
+    
+    /// Pipe both stdout and stderr combined between commands.
+    /// 
+    /// Both output streams are merged and sent to the next command's stdin.
+    /// Note: The order of merged output may vary due to concurrent execution.
+    Both,
+}
+
 /// A pipeline of commands.
 #[derive(Debug)]
 pub struct Pipeline {
     commands: Vec<Cmd>,
     input: Option<String>,
     quiet: bool,
+    pipe_mode: PipeMode,
 }
 
 /// Command execution error.
@@ -134,6 +185,7 @@ impl Cmd {
             commands: vec![self, next],
             input: None,
             quiet,
+            pipe_mode: PipeMode::Stdout,
         }
     }
 
@@ -242,6 +294,91 @@ impl Pipeline {
         self
     }
 
+    /// Set the pipe mode for this pipeline.
+    /// 
+    /// This method allows you to specify which output streams should be connected
+    /// between commands in the pipeline.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `mode` - The pipe mode to use (Stdout, Stderr, or Both)
+    /// 
+    /// # Examples
+    /// 
+    /// ```no_run
+    /// use scriptify::{cmd, PipeMode};
+    /// 
+    /// let output = cmd!("generate-data")
+    ///     .pipe(cmd!("process-data"))
+    ///     .pipe_mode(PipeMode::Stderr)
+    ///     .output()?;
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn pipe_mode(mut self, mode: PipeMode) -> Self {
+        self.pipe_mode = mode;
+        self
+    }
+
+    /// Pipe stderr instead of stdout between commands.
+    /// 
+    /// This is a convenience method equivalent to `pipe_mode(PipeMode::Stderr)`.
+    /// Each command's stderr output becomes the next command's stdin input.
+    /// 
+    /// # Use Cases
+    /// 
+    /// - Error log processing: `error_producer.pipe(grep).pipe_stderr()`
+    /// - Debugging pipelines: Separate error handling from normal data flow
+    /// - Log analysis: Process error streams separately from output streams
+    /// 
+    /// # Examples
+    /// 
+    /// ```no_run
+    /// use scriptify::cmd;
+    /// 
+    /// // Process error messages through a pipeline
+    /// let error_count = cmd!("sh", "-c", "echo 'ERROR: failed' >&2")
+    ///     .pipe(cmd!("wc", "-l"))
+    ///     .pipe_stderr()
+    ///     .output()?;
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn pipe_stderr(self) -> Self {
+        self.pipe_mode(PipeMode::Stderr)
+    }
+
+    /// Pipe both stdout and stderr combined between commands.
+    /// 
+    /// This is a convenience method equivalent to `pipe_mode(PipeMode::Both)`.
+    /// Both output streams are merged and sent to the next command's stdin.
+    /// 
+    /// # Important Notes
+    /// 
+    /// - **Order not guaranteed**: stdout and stderr are merged concurrently
+    /// - **Performance**: May use additional threads for stream merging
+    /// - **Buffering**: Some buffering may occur during the merge process
+    /// 
+    /// # Use Cases
+    /// 
+    /// - Log aggregation: Combine all output for unified processing
+    /// - Debugging: Capture complete command output for analysis
+    /// - Monitoring: Process all output streams together
+    /// 
+    /// # Examples
+    /// 
+    /// ```no_run
+    /// use scriptify::cmd;
+    /// 
+    /// // Sort all output (both stdout and stderr)
+    /// let sorted_output = cmd!("sh", "-c", "echo 'out'; echo 'err' >&2")
+    ///     .pipe(cmd!("sort"))
+    ///     .pipe_both()
+    ///     .output()?;
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn pipe_both(self) -> Self {
+        self.pipe_mode(PipeMode::Both)
+    }
+
     /// Run the pipeline.
     pub fn run(self) -> Result<(), Error> {
         self.execute_internal(false).map(|_| ())
@@ -302,6 +439,13 @@ impl Pipeline {
         // Native pipeline implementation using std::io::pipe from Rust 1.87.0
         // This creates anonymous pipes directly in memory, avoiding the need
         // for shell interpretation and enabling true streaming processing
+        
+        // For stderr or both modes, fallback to stdio implementation
+        // as std::io::pipe() is optimized for stdout only
+        if self.pipe_mode != PipeMode::Stdout {
+            return self.try_stdio_pipeline(capture_output);
+        }
+        
         let mut children: Vec<Child> = Vec::new();
         let mut prev_stdout: Option<std::io::PipeReader> = None;
 
@@ -398,6 +542,7 @@ impl Pipeline {
     fn try_stdio_pipeline(&self, capture_output: bool) -> Result<Vec<u8>, Error> {
         // Fallback native pipeline implementation using Stdio::piped()
         // This is compatible with older Rust versions and avoids shell dependency
+        // Supports piping stdout, stderr, or both between commands
         use std::process::{Child, Stdio};
         use std::thread;
         use std::io::{BufReader, Read, Write};
@@ -415,23 +560,57 @@ impl Pipeline {
                     cmd.stdin(Stdio::piped());
                 }
             } else {
-                // Subsequent commands: use previous command's stdout
-                if let Some(prev_child) = children.last_mut() {
-                    if let Some(stdout) = prev_child.stdout.take() {
-                        cmd.stdin(Stdio::from(stdout));
+                // Subsequent commands: connect to previous command's output
+                match self.pipe_mode {
+                    PipeMode::Stdout => {
+                        if let Some(prev_child) = children.last_mut() {
+                            if let Some(stdout) = prev_child.stdout.take() {
+                                cmd.stdin(Stdio::from(stdout));
+                            }
+                        }
+                    },
+                    PipeMode::Stderr => {
+                        // Need to check if there's a previous child with stderr to pipe
+                        if children.len() > 0 {
+                            if let Some(prev_child) = children.last_mut() {
+                                if let Some(stderr) = prev_child.stderr.take() {
+                                    cmd.stdin(Stdio::from(stderr));
+                                }
+                            }
+                        }
+                    },
+                    PipeMode::Both => {
+                        // For combined mode, we need manual threading
+                        cmd.stdin(Stdio::piped());
                     }
                 }
             }
 
-            // Set up stdout
-            if i == self.commands.len() - 1 {
-                // Last command: capture output if requested
-                if capture_output {
-                    cmd.stdout(Stdio::piped());
+            // Set up stdout and stderr based on pipe mode
+            let is_last = i == self.commands.len() - 1;
+            match self.pipe_mode {
+                PipeMode::Stdout => {
+                    if !is_last {
+                        cmd.stdout(Stdio::piped());
+                    } else if capture_output {
+                        cmd.stdout(Stdio::piped());
+                    }
+                },
+                PipeMode::Stderr => {
+                    if !is_last {
+                        cmd.stderr(Stdio::piped());
+                        // Stdout is not piped in stderr mode, let it go to terminal
+                    } else if capture_output {
+                        // For final command, we want to capture stdout, not stderr
+                        cmd.stdout(Stdio::piped());
+                    }
+                },
+                PipeMode::Both => {
+                    if !is_last || capture_output {
+                        cmd.stdout(Stdio::piped());
+                        cmd.stderr(Stdio::piped());
+                    }
                 }
-            } else {
-                // Intermediate commands: pipe to next command
-                cmd.stdout(Stdio::piped());
             }
 
             let mut child = cmd.spawn().map_err(|e| Error {
@@ -452,6 +631,54 @@ impl Pipeline {
                 }
             }
 
+            // Handle combined mode pipe forwarding
+            if self.pipe_mode == PipeMode::Both && i > 0 {
+                if let Some(prev_child) = children.last_mut() {
+                    if let Some(current_stdin) = child.stdin.take() {
+                        let stdout = prev_child.stdout.take();
+                        let stderr = prev_child.stderr.take();
+                        
+                        thread::spawn(move || {
+                            use std::sync::mpsc;
+                            
+                            let mut stdin = current_stdin;
+                            let (tx, rx) = mpsc::channel::<Vec<u8>>();
+                            
+                            // Forward stdout in a separate thread
+                            if let Some(stdout) = stdout {
+                                let tx_stdout = tx.clone();
+                                thread::spawn(move || {
+                                    let mut reader = BufReader::new(stdout);
+                                    let mut buffer = Vec::new();
+                                    if reader.read_to_end(&mut buffer).is_ok() {
+                                        let _ = tx_stdout.send(buffer);
+                                    }
+                                });
+                            }
+                            
+                            // Forward stderr in a separate thread
+                            if let Some(stderr) = stderr {
+                                let tx_stderr = tx.clone();
+                                thread::spawn(move || {
+                                    let mut reader = BufReader::new(stderr);
+                                    let mut buffer = Vec::new();
+                                    if reader.read_to_end(&mut buffer).is_ok() {
+                                        let _ = tx_stderr.send(buffer);
+                                    }
+                                });
+                            }
+                            
+                            drop(tx); // Close sender
+                            
+                            // Write combined output to stdin
+                            while let Ok(data) = rx.recv() {
+                                let _ = stdin.write_all(&data);
+                            }
+                        });
+                    }
+                }
+            }
+
             children.push(child);
         }
 
@@ -459,12 +686,70 @@ impl Pipeline {
         let mut result = Vec::new();
         if capture_output {
             if let Some(last_child) = children.last_mut() {
-                if let Some(stdout) = last_child.stdout.take() {
-                    let mut reader = BufReader::new(stdout);
-                    reader.read_to_end(&mut result).map_err(|e| Error {
-                        message: "Failed to read output".to_string(),
-                        source: Some(e),
-                    })?;
+                match self.pipe_mode {
+                    PipeMode::Stdout => {
+                        if let Some(stdout) = last_child.stdout.take() {
+                            let mut reader = BufReader::new(stdout);
+                            reader.read_to_end(&mut result).map_err(|e| Error {
+                                message: "Failed to read stdout".to_string(),
+                                source: Some(e),
+                            })?;
+                        }
+                    },
+                    PipeMode::Stderr => {
+                        // For stderr pipe mode, still capture stdout from final command
+                        // This is more practical: pipe stderr between commands, but get final stdout
+                        if let Some(stdout) = last_child.stdout.take() {
+                            let mut reader = BufReader::new(stdout);
+                            reader.read_to_end(&mut result).map_err(|e| Error {
+                                message: "Failed to read stdout from final command".to_string(),
+                                source: Some(e),
+                            })?;
+                        }
+                    },
+                    PipeMode::Both => {
+                        // Read both stdout and stderr
+                        use std::sync::mpsc;
+                        
+                        let (tx, rx) = mpsc::channel::<Vec<u8>>();
+                        let mut handles = vec![];
+                        
+                        if let Some(stdout) = last_child.stdout.take() {
+                            let tx_stdout = tx.clone();
+                            let handle = thread::spawn(move || {
+                                let mut reader = BufReader::new(stdout);
+                                let mut data = Vec::new();
+                                if reader.read_to_end(&mut data).is_ok() {
+                                    let _ = tx_stdout.send(data);
+                                }
+                            });
+                            handles.push(handle);
+                        }
+                        
+                        if let Some(stderr) = last_child.stderr.take() {
+                            let tx_stderr = tx.clone();
+                            let handle = thread::spawn(move || {
+                                let mut reader = BufReader::new(stderr);
+                                let mut data = Vec::new();
+                                if reader.read_to_end(&mut data).is_ok() {
+                                    let _ = tx_stderr.send(data);
+                                }
+                            });
+                            handles.push(handle);
+                        }
+                        
+                        drop(tx); // Close sender
+                        
+                        // Collect all data
+                        while let Ok(data) = rx.recv() {
+                            result.extend(data);
+                        }
+                        
+                        // Wait for threads to complete
+                        for handle in handles {
+                            let _ = handle.join();
+                        }
+                    }
                 }
             }
         }
@@ -648,5 +933,56 @@ mod cmd_tests {
             .output()
             .unwrap();
         assert_eq!(output.trim(), "DLROW OLLEH");
+    }
+
+    #[test]
+    fn test_pipe_stderr() {
+        // Test piping stderr to next command
+        // First command generates stderr, second command should receive it
+        let output = cmd!("sh", "-c", "echo 'error message' >&2")
+            .pipe(cmd!("wc", "-c"))
+            .pipe_stderr()
+            .quiet()
+            .output()
+            .unwrap();
+        
+        // Should count characters in the stderr message (13 chars + newline = 14)
+        assert_eq!(output.trim(), "14");
+    }
+
+    #[test]
+    fn test_pipe_both() {
+        // Test piping both stdout and stderr
+        let output = cmd!("sh", "-c", "echo 'stdout' && echo 'stderr' >&2")
+            .pipe(cmd!("sort"))
+            .pipe_both()
+            .quiet()
+            .output()
+            .unwrap();
+        
+        // Should contain both outputs (order may vary due to threading)
+        let output_str = output.trim();
+        assert!(output_str.contains("stdout"));
+        assert!(output_str.contains("stderr"));
+    }
+
+    #[test]
+    fn test_pipe_mode_explicit() {
+        // Test setting pipe mode explicitly
+        let output = cmd!("echo", "test")
+            .pipe(cmd!("cat"))
+            .pipe_mode(PipeMode::Stdout)
+            .quiet()
+            .output()
+            .unwrap();
+        
+        assert_eq!(output.trim(), "test");
+    }
+
+    #[test]
+    fn test_default_pipe_mode() {
+        // Test that default pipe mode is Stdout
+        let pipeline = cmd!("echo", "test").pipe(cmd!("cat"));
+        assert_eq!(pipeline.pipe_mode, PipeMode::Stdout);
     }
 }
