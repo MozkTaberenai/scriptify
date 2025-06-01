@@ -355,9 +355,7 @@ impl Cmd {
 
         // Handle arguments with single quotes specially
         if arg_str.contains('\'') {
-            let escaped = arg_str
-                .replace('\\', "\\\\")
-                .replace('"', "\\\"");
+            let escaped = arg_str.replace('\\', "\\\\").replace('"', "\\\"");
             let escaped = escape_control_chars(&escaped);
             return format!("\"{}\"", escaped);
         }

@@ -192,7 +192,10 @@ fn test_quote_argument_mixed_everything() {
     // Test argument with single quotes, control chars, and regular text
     let arg = OsString::from("can't handle\tthis\ncomplex 'string' with\0null");
     let quoted = Cmd::quote_argument(&arg);
-    assert_eq!(quoted, "\"can't handle\\tthis\\ncomplex 'string' with\\0null\"");
+    assert_eq!(
+        quoted,
+        "\"can't handle\\tthis\\ncomplex 'string' with\\0null\""
+    );
 }
 
 #[test]

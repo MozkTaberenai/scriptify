@@ -10,7 +10,7 @@ fn main() {
     cmd!("echo", "hello\tworld\twith\ttabs").run().unwrap();
     println!();
 
-    // Newline characters  
+    // Newline characters
     println!("Newline characters:");
     cmd!("echo", "line1\nline2\nline3").run().unwrap();
     println!();
@@ -29,7 +29,8 @@ fn main() {
     println!("Complex example:");
     cmd!("echo", "path/to/file\twith\nspecial chars")
         .env("TEST_VAR", "value\twith\ttabs")
-        .run().unwrap();
+        .run()
+        .unwrap();
     println!();
 
     println!("Notice how \\t, \\n, \\r are displayed in the command echo");
