@@ -18,11 +18,29 @@ fn get_project_root() -> Result<PathBuf> {
     }
 }
 
-pub fn generate_readme() -> Result<()> {
+pub fn generate_readme_with_options(force: bool) -> Result<()> {
     echo!("🔧 Generating README.md...");
 
     let project_root = get_project_root()?;
     let lib_rs_path = project_root.join("src/lib.rs");
+    let readme_path = project_root.join("README.md");
+
+    // Check if regeneration is needed (unless forced)
+    if !force && readme_path.exists() {
+        if let (Ok(lib_meta), Ok(readme_meta)) = (
+            std::fs::metadata(&lib_rs_path),
+            std::fs::metadata(&readme_path),
+        ) {
+            if let (Ok(lib_modified), Ok(readme_modified)) =
+                (lib_meta.modified(), readme_meta.modified())
+            {
+                if readme_modified > lib_modified {
+                    echo!("✅ README.md is up to date (use --force to regenerate anyway)");
+                    return Ok(());
+                }
+            }
+        }
+    }
 
     // Read the lib.rs file to extract documentation and examples
     let _lib_content = fs::read_to_string(&lib_rs_path)?;
@@ -39,7 +57,6 @@ pub fn generate_readme() -> Result<()> {
     let readme_content = build_enhanced_readme(&base_readme, &examples)?;
 
     // Write to README.md
-    let readme_path = project_root.join("README.md");
     fs::write(&readme_path, &readme_content)?;
 
     echo!("✅ README.md generated successfully!");
