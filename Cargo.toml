@@ -20,12 +20,36 @@ anstyle = "1.0.7"
 ansi-to-html = "0.2.1"
 cargo-readme = "3.3.1"
 
+
+# 01_basics - Beginner examples
 [[example]]
-name = "cmd"
+name = "hello_world"
+path = "examples/01_basics/hello_world.rs"
 [[example]]
-name = "fs"
+name = "simple_commands"
+path = "examples/01_basics/simple_commands.rs"
 [[example]]
-name = "pipeline_performance"
+name = "simple_pipes"
+path = "examples/01_basics/simple_pipes.rs"
+[[example]]
+name = "simple_fs"
+path = "examples/01_basics/simple_fs.rs"
+
+# 02_intermediate - Intermediate examples
+[[example]]
+name = "error_handling"
+path = "examples/02_intermediate/error_handling.rs"
+[[example]]
+name = "environment"
+path = "examples/02_intermediate/environment.rs"
+[[example]]
+name = "complex_pipes"
+path = "examples/02_intermediate/complex_pipes.rs"
+[[example]]
+name = "pipe_modes"
+path = "examples/02_intermediate/pipe_modes.rs"
+
+
 
 
 [package.metadata.docs.rs]

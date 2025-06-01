@@ -26,12 +26,14 @@ Brief description of what this PR does.
 
 ## Code Quality
 
-- [ ] ✅ All clippy checks pass:
-  - [ ] `cargo clippy --all-targets --all-features -- -D warnings`
-  - [ ] `cargo clippy --tests -- -D warnings`
-  - [ ] `cargo clippy --examples -- -D warnings`
-- [ ] ✅ Code formatted (`cargo xtask fmt`)
-- [ ] ✅ README updated if needed (`cargo xtask readme`)
+- [ ] ✅ All checks pass (`cargo xtask ci`):
+  - [ ] Code formatting (`cargo fmt`)
+  - [ ] Clippy lints (`cargo clippy --all-targets --all-features -- -D warnings`)
+  - [ ] Tests (`cargo test --all-targets`)
+  - [ ] Documentation builds (`cargo doc`)
+  - [ ] README updated (`cargo xtask readme`)
+- [ ] ✅ MSRV compatibility (Rust 1.87.0+)
+- [ ] ✅ Cross-platform compatibility (Linux, macOS)
 
 ## Breaking Changes
 
@@ -46,6 +48,12 @@ Brief description of what this PR does.
 - [ ] README updated if public interface changed
 - [ ] Examples added/updated for new features
 - [ ] Changelog entry added if needed
+
+## Platform Support
+
+- [ ] Tested on Linux
+- [ ] Tested on macOS
+- [ ] No platform-specific changes (Unix-compatible only)
 
 ## Additional Notes
 

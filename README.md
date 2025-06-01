@@ -39,9 +39,8 @@ scriptify = "0.1.0"
 Currently supported platforms:
 - **Linux** ✅ Full support with native pipe optimization
 - **macOS** ✅ Full support with native pipe optimization
-- **Windows** ⚠️ Limited support
 
-**Note on Windows**: While the core functionality works on Windows, many examples and tests use Unix-specific commands (`ls`, `cat`, `tr`, `sort`, etc.) that are not available in standard Windows environments. Windows support could be improved in future versions with command mapping or by requiring tools like Git Bash or WSL.
+Scriptify is designed for Unix-like systems and uses Unix shell commands and utilities.
 
 ### Requirements
 
@@ -117,7 +116,82 @@ let result = cmd!("grep", "pattern")
     .output()?; // Processes without loading all data into memory
 ```
 
+### Tutorial: Learning Scriptify
+
+#### Getting Started with Your First Program
+
+Let's create a simple "Hello, World!" program that demonstrates scriptify's visibility:
+
+```rust
+use scriptify::*;
+
+fn main() -> Result<()> {
+    echo!("Hello, scriptify!");
+    cmd!("echo", "Hello from the shell!").run()?;
+    Ok(())
+}
+```
+
+When you run this with `cargo run`, you'll see:
+```
+Hello, scriptify!
+cmd echo "Hello from the shell!"
+Hello from the shell!
+```
+
+Notice how scriptify shows you what commands it's executing - this is one of its key features for visibility and debugging.
+
+#### The cmd! Macro
+
+The heart of scriptify is the `cmd!` macro:
+
+```rust
+use scriptify::*;
+
+// Basic command
+cmd!("ls").run()?;
+
+// Command with arguments
+cmd!("ls", "-la").run()?;
+
+// Multiple arguments
+cmd!("echo", "Hello", "World").run()?;
+```
+
+#### The echo! Macro
+
+Use `echo!` for formatted output with automatic spacing:
+
+```rust
+use scriptify::*;
+
+echo!("Simple message");
+echo!("Value:", 42);
+echo!("Multiple", "arguments", "work", "too");
+
+let name = "Alice";
+let age = 30;
+echo!("User:", name, "Age:", age);
+```
+
+#### Builder Pattern
+
+Commands support a fluent builder pattern for complex configurations:
+
+```rust
+use scriptify::*;
+
+cmd!("grep", "error")
+    .arg("logfile.txt")
+    .cwd("/var/log")
+    .env("LANG", "C")
+    .quiet()
+    .run()?;
+```
+
 #### Input and Output
+
+Provide input to commands and capture their output:
 
 ```rust
 use scriptify::*;
@@ -133,6 +207,38 @@ let result = cmd!("tr", "[:lower:]", "[:upper:]")
     .input("hello world")
     .output()?;
 echo!("Uppercase:", result.trim());
+
+// Reading from files and processing
+let file_content = fs::read_to_string("Cargo.toml")?;
+let line_count = cmd!("wc", "-l")
+    .input(&file_content)
+    .output()?;
+echo!("Lines in Cargo.toml:", line_count.trim());
+```
+
+#### Pipe Modes
+
+Control what streams are piped between commands:
+
+```rust
+use scriptify::*;
+
+// Pipe stdout (default)
+cmd!("echo", "data")
+    .pipe(cmd!("sort"))
+    .run()?;
+
+// Pipe stderr
+cmd!("sh", "-c", "echo 'error message' >&2")
+    .pipe(cmd!("grep", "ERROR"))
+    .pipe_stderr()
+    .run()?;
+
+// Pipe both stdout and stderr
+cmd!("sh", "-c", "echo 'stdout'; echo 'stderr' >&2")
+    .pipe(cmd!("sort"))
+    .pipe_both()
+    .run()?;
 ```
 
 #### Environment and Working Directory
@@ -172,6 +278,17 @@ echo!("Config content:", content);
 fs::create_dir_all("project/src")?;
 fs::copy("config.txt", "project/config.txt")?;
 
+// Directory traversal
+for entry in fs::read_dir("project")? {
+    let entry = entry?;
+    let path = entry.path();
+    if path.is_dir() {
+        echo!("Directory:", path.display());
+    } else {
+        echo!("File:", path.display());
+    }
+}
+
 // Cleanup
 fs::remove_file("config.txt")?;
 fs::remove_dir_all("project")?;
@@ -190,6 +307,14 @@ match cmd!("nonexistent-command").run() {
     Err(e) => echo!("Command failed:", e),
 }
 
+// Check command availability
+if cmd!("which", "git").run().is_ok() {
+    echo!("Git is available");
+    cmd!("git", "--version").run()?;
+} else {
+    echo!("Git not found - please install it");
+}
+
 // Use the ? operator for early returns
 fn deploy_app() -> Result<()> {
     cmd!("cargo", "build", "--release").run()?;
@@ -198,6 +323,73 @@ fn deploy_app() -> Result<()> {
     echo!("Deployment complete!");
     Ok(())
 }
+```
+
+### Advanced Usage Patterns
+
+#### Environment Variables and Working Directory
+
+```rust
+use scriptify::*;
+
+// Set environment variables
+cmd!("printenv", "MY_VAR")
+    .env("MY_VAR", "Hello from Rust!")
+    .run()?;
+
+// Change working directory
+cmd!("pwd").cwd("/tmp").run()?;
+
+// Combine multiple settings
+cmd!("make", "install")
+    .env("PREFIX", "/usr/local")
+    .env("DESTDIR", "/tmp/staging")
+    .cwd("./my-project")
+    .run()?;
+```
+
+#### Quiet Mode
+
+Sometimes you don't want to see the command output:
+
+```rust
+use scriptify::*;
+
+// Run silently
+cmd!("git", "status").quiet().run()?;
+
+// Get output without showing the command
+let output = cmd!("whoami").quiet().output()?;
+echo!("Current user:", output.trim());
+
+// Global quiet mode using environment
+unsafe {
+    std::env::set_var("NO_ECHO", "1");
+}
+cmd!("echo", "This won't show the command").run()?;
+unsafe {
+    std::env::remove_var("NO_ECHO");
+}
+```
+
+#### Dynamic Command Building
+
+```rust
+use scriptify::*;
+
+// Build commands programmatically
+let mut find_cmd = cmd!("find", "/var/log");
+find_cmd = find_cmd.arg("-name").arg("*.log");
+find_cmd = find_cmd.arg("-mtime").arg("+7");
+find_cmd.run()?;
+
+// Conditional arguments
+let mut cmd = cmd!("ls");
+cmd = cmd.arg("-l");
+if std::env::var("SHOW_ALL").is_ok() {
+    cmd = cmd.arg("-a");
+}
+cmd.run()?;
 ```
 
 #### Quiet Mode
@@ -303,6 +495,61 @@ fn system_info() -> Result<()> {
 }
 ```
 
+### Best Practices
+
+#### Error Handling
+
+Always handle potential failures appropriately:
+
+```rust
+use scriptify::*;
+
+// Good: Handle errors appropriately
+fn safe_operation() -> Result<()> {
+    match cmd!("risky-command").run() {
+        Ok(_) => echo!("Operation succeeded"),
+        Err(e) => {
+            echo!("Operation failed:", e);
+            // Implement fallback or recovery
+            cmd!("fallback-command").run()?;
+        }
+    }
+    Ok(())
+}
+```
+
+#### Performance Considerations
+
+Use appropriate pipeline modes and avoid unnecessary operations:
+
+```rust
+use scriptify::*;
+
+// Efficient: Stream processing
+let result = cmd!("find", ".", "-name", "*.log")
+    .pipe(cmd!("xargs", "grep", "ERROR"))
+    .pipe(cmd!("wc", "-l"))
+    .output()?;
+echo!("Error count:", result.trim());
+```
+
+#### Cross-Platform Compatibility
+
+Check platform capabilities when needed:
+
+```rust
+use scriptify::*;
+
+fn platform_aware_command() -> Result<()> {
+    if cfg!(unix) {
+        cmd!("ls", "-la").run()?;
+    } else {
+        cmd!("dir").run()?;
+    }
+    Ok(())
+}
+```
+
 ### Environment Variables
 
 You can control scriptify's behavior with environment variables:
@@ -327,6 +574,31 @@ NO_ECHO=1 cargo run  # Run without command echoing
 | Debugging | ✅ | ✅ | ❌ |
 | Performance | ✅ Optimized | ⚠️ | ⚠️ |
 
+### Examples
+
+This crate includes comprehensive examples organized by skill level:
+
+#### Basic Examples (`examples/01_basics/`)
+- `hello_world.rs` - First steps with scriptify
+- `simple_commands.rs` - Basic command execution patterns
+- `simple_pipes.rs` - Introduction to pipelines
+- `simple_fs.rs` - File system operations
+
+#### Intermediate Examples (`examples/02_intermediate/`)
+- `error_handling.rs` - Robust error management
+- `environment.rs` - Environment variables and working directories
+- `complex_pipes.rs` - Advanced pipeline operations
+- `pipe_modes.rs` - Stdout/stderr piping control
+
+Run any example with:
+```bash
+cargo run --example hello_world
+cargo run --example simple_commands
+# ... etc
+```
+
+Start with `hello_world.rs` and progress through the examples in order for the best learning experience.
+
 ### Contributing
 
 We welcome contributions! Please see our [GitHub repository](https://github.com/MozkTaberenai/scriptify) for more information.
@@ -336,220 +608,6 @@ We welcome contributions! Please see our [GitHub repository](https://github.com/
 This project is licensed under the MIT License.
 
 License: MIT
-
-
-## Examples
-
-The following examples are available in the `examples/` directory:
-
-### cmd
-
-```rust
-// Basic command execution
-cmd!("echo", "Hello, World!").run()?;
-// Command with multiple arguments
-cmd!("echo").args(["a", "b", "c"]).run()?;
-// Command with environment variable
-cmd!("echo", "hello").env("USER", "alice").run()?;
-// Command with working directory
-cmd!("ls", "-la").cwd("src").run()?;
-// Get command output
-let date = cmd!("date").output()?;
-echo!("Current date:", date.trim());
-// Handle command that might fail
-if let Err(err) = cmd!("unknown_command").run() {
-    echo!("Command failed:", err);
-}
-// Command piping
-cmd!("echo", "hello world")
-    .pipe(cmd!("tr", "[:lower:]", "[:upper:]"))
-    .run()?;
-// Multiple pipes
-cmd!("date")
-    .pipe(cmd!("rev"))
-    .pipe(cmd!("tr", "[:upper:]", "[:lower:]"))
-    .run()?;
-// Pipe with input
-let result = cmd!("tr", "[:lower:]", "[:upper:]")
-    .input("hello world")
-    .output()?;
-echo!("Uppercase:", result.trim());
-// Pipeline with input
-let result = cmd!("sort")
-    .pipe(cmd!("uniq"))
-    .input("apple\nbanana\napple\ncherry\nbanana")
-    .output()?;
-echo!("Unique fruits:", result.trim());
-// Quiet execution (no echo)
-cmd!("echo", "This won't be echoed").quiet().run()?;
-Ok(())
-```
-
-Run with: `cargo run --example cmd`
-
-### pipeline_performance
-
-```rust
-println!("Pipeline Performance Demonstration");
-println!("==================================\n");
-// Test with a reasonably large dataset
-let test_data = generate_test_data(10000);
-println!("Testing with {} lines of data", test_data.lines().count());
-println!("Data size: {} bytes\n", test_data.len());
-// Test 1: Simple native pipeline
-println!("Test 1: Simple text processing pipeline");
-let start = Instant::now();
-let result1 = cmd!("tr", "[:lower:]", "[:upper:]")
-    .pipe(cmd!("sort"))
-    .pipe(cmd!("uniq", "-c"))
-    .input(&test_data)
-    .output()?;
-let duration1 = start.elapsed();
-println!("Pipeline result: {} lines", result1.lines().count());
-println!("Time taken: {:?}\n", duration1);
-// Test 2: Memory efficiency comparison
-println!("Test 2: Memory efficiency with large data streaming");
-let large_data = generate_test_data(50000);
-let start = Instant::now();
-let result2 = cmd!("grep", "test")
-    .pipe(cmd!("wc", "-l"))
-    .input(&large_data)
-    .output()?;
-let duration2 = start.elapsed();
-println!("Large data processing result: {}", result2.trim());
-println!("Time taken: {:?}\n", duration2);
-// Test 3: Complex pipeline with multiple stages
-println!("Test 3: Complex multi-stage pipeline");
-let start = Instant::now();
-let result3 = cmd!("cat")
-    .pipe(cmd!("grep", "data"))
-    .pipe(cmd!("cut", "-d", ":", "-f", "2"))
-    .pipe(cmd!("sort", "-n"))
-    .pipe(cmd!("tail", "-5"))
-    .input(&test_data)
-    .output()?;
-let duration3 = start.elapsed();
-println!("Complex pipeline result: {} lines", result3.lines().count());
-println!("Time taken: {:?}\n", duration3);
-// Test 4: Demonstrate streaming vs buffering
-println!("Test 4: Real-time processing demonstration");
-let start = Instant::now();
-// This would process data as it comes in, not waiting for all input
-cmd!("head", "-100")
-    .pipe(cmd!("nl"))
-    .input(&test_data)
-    .run()?;
-let duration4 = start.elapsed();
-println!("Streaming processing time: {:?}\n", duration4);
-println!("Native Pipeline Features:");
-println!("========================");
-println!("✅ Memory efficient streaming processing");
-println!("✅ Low process overhead with direct pipes");
-println!("✅ Real-time data processing for large datasets");
-println!("✅ Excellent error isolation and handling");
-println!("✅ Platform-independent implementation");
-Ok(())
-```
-
-Run with: `cargo run --example pipeline_performance`
-
-### fs
-
-```rust
-fs::create_dir("tmp")?;
-fs::write("tmp/a.txt", "abc")?;
-show_metadata("tmp/a.txt")?;
-fs::copy("tmp/a.txt", "tmp/b.txt")?;
-show_metadata("tmp/b.txt")?;
-fs::hard_link("tmp/a.txt", "tmp/h.txt")?;
-show_metadata("tmp/h.txt")?;
-fs::rename("tmp/a.txt", "tmp/c.txt")?;
-show_metadata("tmp/c.txt")?;
-fs::create_dir_all("tmp/d/e")?;
-for entry in fs::read_dir("tmp")? {
-    show_metadata(entry?.path())?;
-}
-fs::remove_file("tmp/b.txt")?;
-fs::remove_dir("tmp/d/e")?;
-fs::remove_dir_all("tmp")?;
-Ok(())
-```
-
-Run with: `cargo run --example fs`
-
-### pipe_modes
-
-```rust
-println!("=== Pipe Mode Examples ===\n");
-// Example 1: Default stdout piping
-println!("1. Default stdout piping:");
-let output = cmd!("echo", "hello world")
-    .pipe(cmd!("tr", "[:lower:]", "[:upper:]"))
-    .output()?;
-println!("   Output: {}", output.trim());
-println!();
-// Example 2: Stderr piping
-println!("2. Stderr piping:");
-println!("   Command: Generate error message and count its characters");
-let error_char_count = cmd!("sh", "-c", "echo 'Error: Something went wrong!' >&2")
-    .pipe(cmd!("wc", "-c"))
-    .pipe_stderr()
-    .output()?;
-println!(
-    "   Error message character count: {}",
-    error_char_count.trim()
-);
-println!();
-// Example 3: Both stdout and stderr piping
-println!("3. Combined stdout+stderr piping:");
-println!("   Command: Generate both outputs and sort them together");
-let combined_output = cmd!("sh", "-c", "echo 'stdout line'; echo 'stderr line' >&2")
-    .pipe(cmd!("sort"))
-    .pipe_both()
-    .output()?;
-println!("   Combined and sorted output:");
-for line in combined_output.lines() {
-    println!("     {}", line);
-}
-println!();
-// Example 4: Using PipeMode explicitly
-println!("4. Explicit pipe mode setting:");
-let explicit_output = cmd!("echo", "test data")
-    .pipe(cmd!("cat"))
-    .pipe_mode(PipeMode::Stdout)
-    .output()?;
-println!("   Explicit stdout mode: {}", explicit_output.trim());
-println!();
-// Example 5: Error processing pipeline
-println!("5. Error processing pipeline:");
-println!("   Command: Generate multiple error lines and count them");
-let error_lines = cmd!(
-    "sh",
-    "-c",
-    "echo 'ERROR 1' >&2; echo 'ERROR 2' >&2; echo 'ERROR 3' >&2"
-)
-.pipe(cmd!("wc", "-l"))
-.pipe_stderr()
-.output()?;
-println!("   Number of error lines: {}", error_lines.trim());
-println!();
-// Example 6: Complex stderr processing
-println!("6. Complex stderr processing:");
-println!("   Command: Filter specific errors from stderr");
-let filtered_errors = cmd!(
-    "sh",
-    "-c",
-    "echo 'INFO: starting' >&2; echo 'ERROR: failed' >&2; echo 'INFO: done' >&2"
-)
-.pipe(cmd!("grep", "ERROR"))
-.pipe_stderr()
-.output()?;
-println!("   Filtered errors: {}", filtered_errors.trim());
-Ok(())
-```
-
-Run with: `cargo run --example pipe_modes`
-
 
 ## Development
 

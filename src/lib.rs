@@ -32,9 +32,8 @@
 //! Currently supported platforms:
 //! - **Linux** ✅ Full support with native pipe optimization
 //! - **macOS** ✅ Full support with native pipe optimization
-//! - **Windows** ⚠️ Limited support
 //!
-//! **Note on Windows**: While the core functionality works on Windows, many examples and tests use Unix-specific commands (`ls`, `cat`, `tr`, `sort`, etc.) that are not available in standard Windows environments. Windows support could be improved in future versions with command mapping or by requiring tools like Git Bash or WSL.
+//! Scriptify is designed for Unix-like systems and uses Unix shell commands and utilities.
 //!
 //! ## Requirements
 //!
@@ -113,7 +112,84 @@
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 //!
+//! ## Tutorial: Learning Scriptify
+//!
+//! ### Getting Started with Your First Program
+//!
+//! Let's create a simple "Hello, World!" program that demonstrates scriptify's visibility:
+//!
+//! ```no_run
+//! use scriptify::*;
+//!
+//! fn main() -> Result<()> {
+//!     echo!("Hello, scriptify!");
+//!     cmd!("echo", "Hello from the shell!").run()?;
+//!     Ok(())
+//! }
+//! ```
+//!
+//! When you run this with `cargo run`, you'll see:
+//! ```text
+//! Hello, scriptify!
+//! cmd echo "Hello from the shell!"
+//! Hello from the shell!
+//! ```
+//!
+//! Notice how scriptify shows you what commands it's executing - this is one of its key features for visibility and debugging.
+//!
+//! ### The cmd! Macro
+//!
+//! The heart of scriptify is the `cmd!` macro:
+//!
+//! ```no_run
+//! use scriptify::*;
+//!
+//! // Basic command
+//! cmd!("ls").run()?;
+//!
+//! // Command with arguments  
+//! cmd!("ls", "-la").run()?;
+//!
+//! // Multiple arguments
+//! cmd!("echo", "Hello", "World").run()?;
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
+//!
+//! ### The echo! Macro
+//!
+//! Use `echo!` for formatted output with automatic spacing:
+//!
+//! ```no_run
+//! use scriptify::*;
+//!
+//! echo!("Simple message");
+//! echo!("Value:", 42);
+//! echo!("Multiple", "arguments", "work", "too");
+//!
+//! let name = "Alice";
+//! let age = 30;
+//! echo!("User:", name, "Age:", age);
+//! ```
+//!
+//! ### Builder Pattern
+//!
+//! Commands support a fluent builder pattern for complex configurations:
+//!
+//! ```no_run
+//! use scriptify::*;
+//!
+//! cmd!("grep", "error")
+//!     .arg("logfile.txt")
+//!     .cwd("/var/log")
+//!     .env("LANG", "C")
+//!     .quiet()
+//!     .run()?;
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
+//!
 //! ### Input and Output
+//!
+//! Provide input to commands and capture their output:
 //!
 //! ```no_run
 //! use scriptify::*;
@@ -129,6 +205,39 @@
 //!     .input("hello world")
 //!     .output()?;
 //! echo!("Uppercase:", result.trim());
+//!
+//! // Reading from files and processing
+//! let file_content = fs::read_to_string("Cargo.toml")?;
+//! let line_count = cmd!("wc", "-l")
+//!     .input(&file_content)
+//!     .output()?;
+//! echo!("Lines in Cargo.toml:", line_count.trim());
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
+//!
+//! ### Pipe Modes
+//!
+//! Control what streams are piped between commands:
+//!
+//! ```no_run
+//! use scriptify::*;
+//!
+//! // Pipe stdout (default)
+//! cmd!("echo", "data")
+//!     .pipe(cmd!("sort"))
+//!     .run()?;
+//!
+//! // Pipe stderr
+//! cmd!("sh", "-c", "echo 'error message' >&2")
+//!     .pipe(cmd!("grep", "ERROR"))
+//!     .pipe_stderr()
+//!     .run()?;
+//!
+//! // Pipe both stdout and stderr
+//! cmd!("sh", "-c", "echo 'stdout'; echo 'stderr' >&2")
+//!     .pipe(cmd!("sort"))
+//!     .pipe_both()
+//!     .run()?;
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 //!
@@ -170,6 +279,17 @@
 //! fs::create_dir_all("project/src")?;
 //! fs::copy("config.txt", "project/config.txt")?;
 //!
+//! // Directory traversal
+//! for entry in fs::read_dir("project")? {
+//!     let entry = entry?;
+//!     let path = entry.path();
+//!     if path.is_dir() {
+//!         echo!("Directory:", path.display());
+//!     } else {
+//!         echo!("File:", path.display());
+//!     }
+//! }
+//!
 //! // Cleanup
 //! fs::remove_file("config.txt")?;
 //! fs::remove_dir_all("project")?;
@@ -189,6 +309,14 @@
 //!     Err(e) => echo!("Command failed:", e),
 //! }
 //!
+//! // Check command availability
+//! if cmd!("which", "git").run().is_ok() {
+//!     echo!("Git is available");
+//!     cmd!("git", "--version").run()?;
+//! } else {
+//!     echo!("Git not found - please install it");
+//! }
+//!
 //! // Use the ? operator for early returns
 //! fn deploy_app() -> Result<()> {
 //!     cmd!("cargo", "build", "--release").run()?;
@@ -197,6 +325,77 @@
 //!     echo!("Deployment complete!");
 //!     Ok(())
 //! }
+//! # deploy_app().ok();
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
+//!
+//! ## Advanced Usage Patterns
+//!
+//! ### Environment Variables and Working Directory
+//!
+//! ```no_run
+//! use scriptify::*;
+//!
+//! // Set environment variables
+//! cmd!("printenv", "MY_VAR")
+//!     .env("MY_VAR", "Hello from Rust!")
+//!     .run()?;
+//!
+//! // Change working directory
+//! cmd!("pwd").cwd("/tmp").run()?;
+//!
+//! // Combine multiple settings
+//! cmd!("make", "install")
+//!     .env("PREFIX", "/usr/local")
+//!     .env("DESTDIR", "/tmp/staging")
+//!     .cwd("./my-project")
+//!     .run()?;
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
+//!
+//! ### Quiet Mode
+//!
+//! Sometimes you don't want to see the command output:
+//!
+//! ```no_run
+//! use scriptify::*;
+//!
+//! // Run silently
+//! cmd!("git", "status").quiet().run()?;
+//!
+//! // Get output without showing the command
+//! let output = cmd!("whoami").quiet().output()?;
+//! echo!("Current user:", output.trim());
+//!
+//! // Global quiet mode using environment
+//! unsafe {
+//!     std::env::set_var("NO_ECHO", "1");
+//! }
+//! cmd!("echo", "This won't show the command").run()?;
+//! unsafe {
+//!     std::env::remove_var("NO_ECHO");
+//! }
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
+//!
+//! ### Dynamic Command Building
+//!
+//! ```no_run
+//! use scriptify::*;
+//!
+//! // Build commands programmatically
+//! let mut find_cmd = cmd!("find", "/var/log");
+//! find_cmd = find_cmd.arg("-name").arg("*.log");
+//! find_cmd = find_cmd.arg("-mtime").arg("+7");
+//! find_cmd.run()?;
+//!
+//! // Conditional arguments
+//! let mut cmd = cmd!("ls");
+//! cmd = cmd.arg("-l");
+//! if std::env::var("SHOW_ALL").is_ok() {
+//!     cmd = cmd.arg("-a");
+//! }
+//! cmd.run()?;
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 //!
@@ -304,6 +503,66 @@
 //! }
 //! ```
 //!
+//! ## Best Practices
+//!
+//! ### Error Handling
+//!
+//! Always handle potential failures appropriately:
+//!
+//! ```no_run
+//! use scriptify::*;
+//!
+//! // Good: Handle errors appropriately
+//! fn safe_operation() -> Result<()> {
+//!     match cmd!("risky-command").run() {
+//!         Ok(_) => echo!("Operation succeeded"),
+//!         Err(e) => {
+//!             echo!("Operation failed:", e);
+//!             // Implement fallback or recovery
+//!             cmd!("fallback-command").run()?;
+//!         }
+//!     }
+//!     Ok(())
+//! }
+//! # safe_operation().ok();
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
+//!
+//! ### Performance Considerations
+//!
+//! Use appropriate pipeline modes and avoid unnecessary operations:
+//!
+//! ```no_run
+//! use scriptify::*;
+//!
+//! // Efficient: Stream processing
+//! let result = cmd!("find", ".", "-name", "*.log")
+//!     .pipe(cmd!("xargs", "grep", "ERROR"))
+//!     .pipe(cmd!("wc", "-l"))
+//!     .output()?;
+//! echo!("Error count:", result.trim());
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
+//!
+//! ### Cross-Platform Compatibility
+//!
+//! Check platform capabilities when needed:
+//!
+//! ```no_run
+//! use scriptify::*;
+//!
+//! fn platform_aware_command() -> Result<()> {
+//!     if cfg!(unix) {
+//!         cmd!("ls", "-la").run()?;
+//!     } else {
+//!         cmd!("dir").run()?;
+//!     }
+//!     Ok(())
+//! }
+//! # platform_aware_command().ok();
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
+//!
 //! ## Environment Variables
 //!
 //! You can control scriptify's behavior with environment variables:
@@ -327,6 +586,31 @@
 //! | IDE support | ✅ | ✅ | ⚠️ |
 //! | Debugging | ✅ | ✅ | ❌ |
 //! | Performance | ✅ Optimized | ⚠️ | ⚠️ |
+//!
+//! ## Examples
+//!
+//! This crate includes comprehensive examples organized by skill level:
+//!
+//! ### Basic Examples (`examples/01_basics/`)
+//! - `hello_world.rs` - First steps with scriptify
+//! - `simple_commands.rs` - Basic command execution patterns
+//! - `simple_pipes.rs` - Introduction to pipelines
+//! - `simple_fs.rs` - File system operations
+//!
+//! ### Intermediate Examples (`examples/02_intermediate/`)
+//! - `error_handling.rs` - Robust error management
+//! - `environment.rs` - Environment variables and working directories
+//! - `complex_pipes.rs` - Advanced pipeline operations
+//! - `pipe_modes.rs` - Stdout/stderr piping control
+//!
+//! Run any example with:
+//! ```bash
+//! cargo run --example hello_world
+//! cargo run --example simple_commands
+//! # ... etc
+//! ```
+//!
+//! Start with `hello_world.rs` and progress through the examples in order for the best learning experience.
 //!
 //! ## Contributing
 //!
