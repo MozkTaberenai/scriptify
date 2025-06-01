@@ -609,8 +609,6 @@ impl Pipeline {
         Ok(result)
     }
 
-
-
     fn build_std_command_static(cmd_def: &Cmd) -> StdCommand {
         let mut cmd = StdCommand::new(&cmd_def.program);
         cmd.args(&cmd_def.args);
