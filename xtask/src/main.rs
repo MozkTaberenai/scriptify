@@ -39,6 +39,7 @@ fn main() -> Result<()> {
         echo!("  clean     - Clean build artifacts");
         echo!("  bench     - Run benchmarks");
         echo!("  coverage  - Generate test coverage report");
+        echo!("  precommit - Run pre-commit checks (test + clippy + fmt)");
         echo!("  ci        - Run all CI tasks");
         echo!("");
         echo!("Before committing: cargo xtask ci");
@@ -57,6 +58,7 @@ fn main() -> Result<()> {
         "clean" => run_clean()?,
         "bench" => run_bench()?,
         "coverage" => run_coverage()?,
+        "precommit" => run_precommit()?,
         "ci" => run_ci()?,
         _ => {
             echo!("Unknown task:", task);
@@ -121,12 +123,25 @@ fn run_fmt() -> Result<()> {
 }
 
 fn run_clippy() -> Result<()> {
-    echo!("📎 Running clippy...");
+    echo!("📎 Running comprehensive clippy checks...");
     let project_root = get_project_root()?;
-    cmd!("cargo", "clippy", "--all-targets", "--", "-D", "warnings")
+    
+    echo!("  Running clippy for all targets...");
+    cmd!("cargo", "clippy", "--all-targets", "--all-features", "--", "-D", "warnings")
         .cwd(&project_root)
         .run()?;
-    echo!("✅ Clippy passed!");
+    
+    echo!("  Running clippy for tests...");
+    cmd!("cargo", "clippy", "--tests", "--", "-D", "warnings")
+        .cwd(&project_root)
+        .run()?;
+    
+    echo!("  Running clippy for examples...");
+    cmd!("cargo", "clippy", "--examples", "--", "-D", "warnings")
+        .cwd(&project_root)
+        .run()?;
+    
+    echo!("✅ All clippy checks passed!");
     Ok(())
 }
 
@@ -178,6 +193,24 @@ fn run_coverage() -> Result<()> {
         echo!("Falling back to basic test run...");
         run_tests()?;
     }
+    Ok(())
+}
+
+fn run_precommit() -> Result<()> {
+    echo!("🔍 Running pre-commit checks...");
+
+    // Run tests first
+    run_tests()?;
+
+    // Run comprehensive clippy
+    run_clippy()?;
+
+    // Format code
+    run_fmt()?;
+
+    echo!("🎉 Pre-commit checks completed successfully!");
+    echo!("✅ Ready to commit!");
+
     Ok(())
 }
 
