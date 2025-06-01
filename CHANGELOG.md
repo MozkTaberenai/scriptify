@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive error handling
 - `echo!` macro for formatted output
 - Support for `NO_ECHO` environment variable
-- Cross-platform compatibility (Unix, Windows, macOS)
+- Cross-platform compatibility (Unix, macOS)
 
 ### Performance Improvements (Rust 1.87.0+)
 - **Native pipeline implementation** using `std::io::pipe` for enhanced performance

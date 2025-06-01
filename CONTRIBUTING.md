@@ -194,7 +194,6 @@ gh pr create --draft --title "WIP: Feature name"
 ## Platform Support
 
 - **Primary platforms**: Linux and macOS
-- **Windows**: Limited support (examples use Unix commands)
 - **CI**: Only runs on Linux and macOS
 
 When adding examples, use commands available on Unix systems.

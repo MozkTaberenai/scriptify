@@ -32,9 +32,8 @@
 //! Currently supported platforms:
 //! - **Linux** ✅ Full support with native pipe optimization
 //! - **macOS** ✅ Full support with native pipe optimization
-//! - **Windows** ⚠️ Limited support
 //!
-//! **Note on Windows**: While the core functionality works on Windows, many examples and tests use Unix-specific commands (`ls`, `cat`, `tr`, `sort`, etc.) that are not available in standard Windows environments. Windows support could be improved in future versions with command mapping or by requiring tools like Git Bash or WSL.
+//! Scriptify is designed for Unix-like systems and uses Unix shell commands and utilities.
 //!
 //! ## Requirements
 //!
