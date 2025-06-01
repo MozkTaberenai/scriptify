@@ -106,6 +106,8 @@ jobs:
       run: cargo run --example complex_pipes
     - name: Run pipe_modes example
       run: cargo run --example pipe_modes
+    - name: Run mixed_pipe_modes example
+      run: cargo run --example mixed_pipe_modes
 
   docs:
     name: Documentation

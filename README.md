@@ -230,14 +230,12 @@ cmd!("echo", "data")
 
 // Pipe stderr
 cmd!("sh", "-c", "echo 'error message' >&2")
-    .pipe(cmd!("grep", "ERROR"))
-    .pipe_stderr()
+    .pipe_stderr(cmd!("grep", "ERROR"))
     .run()?;
 
 // Pipe both stdout and stderr
 cmd!("sh", "-c", "echo 'stdout'; echo 'stderr' >&2")
-    .pipe(cmd!("sort"))
-    .pipe_both()
+    .pipe_both(cmd!("sort"))
     .run()?;
 ```
 
