@@ -59,7 +59,7 @@
 //! // Using the builder pattern
 //! cmd!("grep", "error")
 //!     .arg("logfile.txt")
-//!     .cwd("/var/log")
+//!     .current_dir("/var/log")
 //!     .env("LANG", "C")
 //!     .run()?;
 //! # Ok::<(), Box<dyn std::error::Error>>(())
@@ -180,7 +180,7 @@
 //!
 //! cmd!("grep", "error")
 //!     .arg("logfile.txt")
-//!     .cwd("/var/log")
+//!     .current_dir("/var/log")
 //!     .env("LANG", "C")
 //!     .quiet()
 //!     .run()?;
@@ -250,13 +250,13 @@
 //!     .run()?;
 //!
 //! // Change working directory
-//! cmd!("pwd").cwd("/tmp").run()?;
+//! cmd!("pwd").current_dir("/tmp").run()?;
 //!
 //! // Combine multiple settings
 //! cmd!("make", "install")
 //!     .env("PREFIX", "/usr/local")
 //!     .env("DESTDIR", "/tmp/staging")
-//!     .cwd("./my-project")
+//!     .current_dir("./my-project")
 //!     .run()?;
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
@@ -340,13 +340,13 @@
 //!     .run()?;
 //!
 //! // Change working directory
-//! cmd!("pwd").cwd("/tmp").run()?;
+//! cmd!("pwd").current_dir("/tmp").run()?;
 //!
 //! // Combine multiple settings
 //! cmd!("make", "install")
 //!     .env("PREFIX", "/usr/local")
 //!     .env("DESTDIR", "/tmp/staging")
-//!     .cwd("./my-project")
+//!     .current_dir("./my-project")
 //!     .run()?;
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```

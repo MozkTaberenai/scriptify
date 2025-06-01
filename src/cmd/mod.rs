@@ -14,7 +14,7 @@ pub struct Cmd {
     program: OsString,
     args: Vec<OsString>,
     envs: Vec<(OsString, OsString)>,
-    cwd: Option<PathBuf>,
+    current_dir: Option<PathBuf>,
     input: Option<String>,
     quiet: bool,
 }
@@ -123,7 +123,7 @@ impl Cmd {
             program: program.as_ref().to_os_string(),
             args: Vec::new(),
             envs: Vec::new(),
-            cwd: None,
+            current_dir: None,
             input: None,
             quiet: false,
         }
@@ -169,8 +169,8 @@ impl Cmd {
     }
 
     /// Set the working directory.
-    pub fn cwd(mut self, dir: impl AsRef<Path>) -> Self {
-        self.cwd = Some(dir.as_ref().to_path_buf());
+    pub fn current_dir(mut self, dir: impl AsRef<Path>) -> Self {
+        self.current_dir = Some(dir.as_ref().to_path_buf());
         self
     }
 
@@ -269,8 +269,8 @@ impl Cmd {
             cmd.env(key, val);
         }
 
-        if let Some(cwd) = &self.cwd {
-            cmd.current_dir(cwd);
+        if let Some(current_dir) = &self.current_dir {
+            cmd.current_dir(current_dir);
         }
 
         if capture_output {
@@ -320,10 +320,10 @@ impl Cmd {
         let mut echo = crate::Echo::new();
         echo = echo.sput("cmd", BRIGHT_BLACK);
 
-        if let Some(cwd) = &self.cwd {
+        if let Some(current_dir) = &self.current_dir {
             echo = echo
                 .sput("cd:", BRIGHT_BLUE)
-                .sput(cwd.to_string_lossy(), UNDERLINE_BRIGHT_BLUE);
+                .sput(current_dir.to_string_lossy(), UNDERLINE_BRIGHT_BLUE);
         }
 
         for (key, val) in &self.envs {
@@ -563,8 +563,8 @@ impl Pipeline {
             cmd.env(key, val);
         }
 
-        if let Some(cwd) = &cmd_def.cwd {
-            cmd.current_dir(cwd);
+        if let Some(current_dir) = &cmd_def.current_dir {
+            cmd.current_dir(current_dir);
         }
 
         cmd
@@ -584,10 +584,10 @@ impl Pipeline {
                 echo = echo.sput(pipe_symbol, MAGENTA);
             }
 
-            if let Some(cwd) = &cmd.cwd {
+            if let Some(current_dir) = &cmd.current_dir {
                 echo = echo
                     .sput("cd:", BRIGHT_BLUE)
-                    .sput(cwd.to_string_lossy(), UNDERLINE_BRIGHT_BLUE);
+                    .sput(current_dir.to_string_lossy(), UNDERLINE_BRIGHT_BLUE);
             }
 
             for (key, val) in &cmd.envs {

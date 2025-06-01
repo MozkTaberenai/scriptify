@@ -63,21 +63,23 @@ fn working_directory_management() -> Result<()> {
 
     // Execute command in different directory
     echo!("\n🔄 Executing commands in different directories:");
-    cmd!("pwd").cwd("temp_work").run()?;
+    cmd!("pwd").current_dir("temp_work").run()?;
 
     // Chain operations in specific directory
     echo!("\n⛓️ Chained operations in specific directory:");
     cmd!("echo", "Hello from temp directory")
-        .cwd("temp_work")
+        .current_dir("temp_work")
         .run()?;
 
     // Create files in specific directory
     echo!("\n📄 Creating files in specific directory:");
-    let file_content = cmd!("echo", "File content").cwd("temp_work").output()?;
+    let file_content = cmd!("echo", "File content")
+        .current_dir("temp_work")
+        .output()?;
     fs::write("temp_work/test.txt", file_content)?;
 
     // Verify file creation
-    cmd!("ls", "-la").cwd("temp_work").run()?;
+    cmd!("ls", "-la").current_dir("temp_work").run()?;
 
     // Cleanup
     fs::remove_dir_all("temp_work")?;

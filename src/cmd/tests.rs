@@ -25,7 +25,7 @@ fn test_cmd_builder() {
     let cmd = Cmd::new("ls")
         .arg("-la")
         .env("TEST", "value")
-        .cwd("/tmp")
+        .current_dir("/tmp")
         .quiet();
 
     assert_eq!(cmd.program, OsString::from("ls"));
@@ -34,7 +34,7 @@ fn test_cmd_builder() {
         cmd.envs,
         vec![(OsString::from("TEST"), OsString::from("value"))]
     );
-    assert_eq!(cmd.cwd, Some(PathBuf::from("/tmp")));
+    assert_eq!(cmd.current_dir, Some(PathBuf::from("/tmp")));
     assert!(cmd.quiet);
 }
 
@@ -365,7 +365,10 @@ fn test_large_input() {
 #[test]
 fn test_invalid_working_directory() {
     // Test with non-existent working directory
-    let result = cmd!("pwd").cwd("/nonexistent/directory/path").quiet().run();
+    let result = cmd!("pwd")
+        .current_dir("/nonexistent/directory/path")
+        .quiet()
+        .run();
     assert!(result.is_err());
 }
 
@@ -592,7 +595,7 @@ fn test_builder_pattern_completeness() {
         .args(vec!["arg2", "arg3"])
         .env("VAR1", "value1")
         .env("VAR2", "value2")
-        .cwd("/tmp")
+        .current_dir("/tmp")
         .input("test input")
         .quiet();
 
@@ -614,7 +617,7 @@ fn test_builder_pattern_completeness() {
         cmd.envs[1],
         (OsString::from("VAR2"), OsString::from("value2"))
     );
-    assert_eq!(cmd.cwd, Some(PathBuf::from("/tmp")));
+    assert_eq!(cmd.current_dir, Some(PathBuf::from("/tmp")));
     assert_eq!(cmd.input, Some("test input".to_string()));
     assert!(cmd.quiet);
 }

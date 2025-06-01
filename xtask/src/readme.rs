@@ -50,7 +50,7 @@ pub fn generate_readme_with_options(force: bool) -> Result<()> {
 
     // Generate README using cargo-readme as base
     let base_readme = cmd!("cargo", "readme", "--no-title", "--no-badges")
-        .cwd(&project_root)
+        .current_dir(&project_root)
         .output()?;
 
     // Create enhanced README content
