@@ -342,6 +342,30 @@ License: MIT
 
 The following examples are available in the `examples/` directory:
 
+### fs
+
+```rust
+fs::create_dir("tmp")?;
+fs::write("tmp/a.txt", "abc")?;
+show_metadata("tmp/a.txt")?;
+fs::copy("tmp/a.txt", "tmp/b.txt")?;
+show_metadata("tmp/b.txt")?;
+fs::hard_link("tmp/a.txt", "tmp/h.txt")?;
+show_metadata("tmp/h.txt")?;
+fs::rename("tmp/a.txt", "tmp/c.txt")?;
+show_metadata("tmp/c.txt")?;
+fs::create_dir_all("tmp/d/e")?;
+for entry in fs::read_dir("tmp")? {
+    show_metadata(entry?.path())?;
+}
+fs::remove_file("tmp/b.txt")?;
+fs::remove_dir("tmp/d/e")?;
+fs::remove_dir_all("tmp")?;
+Ok(())
+```
+
+Run with: `cargo run --example fs`
+
 ### pipe_modes
 
 ```rust
@@ -415,6 +439,51 @@ Ok(())
 
 Run with: `cargo run --example pipe_modes`
 
+### cmd
+
+```rust
+// Basic command execution
+cmd!("echo", "Hello, World!").run()?;
+// Command with multiple arguments
+cmd!("echo").args(["a", "b", "c"]).run()?;
+// Command with environment variable
+cmd!("echo", "hello").env("USER", "alice").run()?;
+// Command with working directory
+cmd!("ls", "-la").cwd("src").run()?;
+// Get command output
+let date = cmd!("date").output()?;
+echo!("Current date:", date.trim());
+// Handle command that might fail
+if let Err(err) = cmd!("unknown_command").run() {
+    echo!("Command failed:", err);
+}
+// Command piping
+cmd!("echo", "hello world")
+    .pipe(cmd!("tr", "[:lower:]", "[:upper:]"))
+    .run()?;
+// Multiple pipes
+cmd!("date")
+    .pipe(cmd!("rev"))
+    .pipe(cmd!("tr", "[:upper:]", "[:lower:]"))
+    .run()?;
+// Pipe with input
+let result = cmd!("tr", "[:lower:]", "[:upper:]")
+    .input("hello world")
+    .output()?;
+echo!("Uppercase:", result.trim());
+// Pipeline with input
+let result = cmd!("sort")
+    .pipe(cmd!("uniq"))
+    .input("apple\nbanana\napple\ncherry\nbanana")
+    .output()?;
+echo!("Unique fruits:", result.trim());
+// Quiet execution (no echo)
+cmd!("echo", "This won't be echoed").quiet().run()?;
+Ok(())
+```
+
+Run with: `cargo run --example cmd`
+
 ### pipeline_performance
 
 ```rust
@@ -480,75 +549,6 @@ Ok(())
 ```
 
 Run with: `cargo run --example pipeline_performance`
-
-### fs
-
-```rust
-fs::create_dir("tmp")?;
-fs::write("tmp/a.txt", "abc")?;
-show_metadata("tmp/a.txt")?;
-fs::copy("tmp/a.txt", "tmp/b.txt")?;
-show_metadata("tmp/b.txt")?;
-fs::hard_link("tmp/a.txt", "tmp/h.txt")?;
-show_metadata("tmp/h.txt")?;
-fs::rename("tmp/a.txt", "tmp/c.txt")?;
-show_metadata("tmp/c.txt")?;
-fs::create_dir_all("tmp/d/e")?;
-for entry in fs::read_dir("tmp")? {
-    show_metadata(entry?.path())?;
-}
-fs::remove_file("tmp/b.txt")?;
-fs::remove_dir("tmp/d/e")?;
-fs::remove_dir_all("tmp")?;
-Ok(())
-```
-
-Run with: `cargo run --example fs`
-
-### cmd
-
-```rust
-// Basic command execution
-cmd!("echo", "Hello, World!").run()?;
-// Command with multiple arguments
-cmd!("echo").args(["a", "b", "c"]).run()?;
-// Command with environment variable
-cmd!("echo", "hello").env("USER", "alice").run()?;
-// Command with working directory
-cmd!("ls", "-la").cwd("src").run()?;
-// Get command output
-let date = cmd!("date").output()?;
-echo!("Current date:", date.trim());
-// Handle command that might fail
-if let Err(err) = cmd!("unknown_command").run() {
-    echo!("Command failed:", err);
-}
-// Command piping
-cmd!("echo", "hello world")
-    .pipe(cmd!("tr", "[:lower:]", "[:upper:]"))
-    .run()?;
-// Multiple pipes
-cmd!("date")
-    .pipe(cmd!("rev"))
-    .pipe(cmd!("tr", "[:upper:]", "[:lower:]"))
-    .run()?;
-// Pipe with input
-let result = cmd!("tr", "[:lower:]", "[:upper:]")
-    .input("hello world")
-    .output()?;
-echo!("Uppercase:", result.trim());
-// Pipeline with input
-let result = cmd!("sort")
-    .pipe(cmd!("uniq"))
-    .input("apple\nbanana\napple\ncherry\nbanana")
-    .output()?;
-echo!("Unique fruits:", result.trim());
-// Quiet execution (no echo)
-cmd!("echo", "This won't be echoed").quiet().run()?;
-Ok(())
-```
-
-Run with: `cargo run --example cmd`
 
 
 ## Development
