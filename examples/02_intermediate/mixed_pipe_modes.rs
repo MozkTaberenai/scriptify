@@ -11,24 +11,24 @@
 use scriptify::*;
 
 fn main() -> Result<()> {
-    echo!("🔀 Mixed Pipe Modes - Simple Examples");
-    echo!("====================================\n");
+    println!("🔀 Mixed Pipe Modes - Simple Examples");
+    println!("====================================\n");
 
     // Example 1: Basic stderr → stdout pipeline
-    echo!("1. Basic Error Processing:");
-    echo!("   Stderr from first command → Count characters → Process result");
+    println!("1. Basic Error Processing:");
+    println!("   Stderr from first command → Count characters → Process result");
 
     let char_count = cmd!("sh", "-c", "echo 'Error message' >&2")
         .pipe_stderr(cmd!("wc", "-c")) // stderr → stdout (count chars)
         .pipe(cmd!("tr", "-d", " ")) // stdout → stdout (remove spaces)
         .output()?;
 
-    echo!("   Character count:", char_count.trim());
-    echo!();
+    println!("   Character count: {}", char_count.trim());
+    println!();
 
     // Example 2: Mixed stdout/stderr processing
-    echo!("2. Mixed Output Processing:");
-    echo!("   Generate both outputs → Process separately → Combine");
+    println!("2. Mixed Output Processing:");
+    println!("   Generate both outputs → Process separately → Combine");
 
     let mixed_result = cmd!("sh", "-c", "echo 'normal output'; echo 'error output' >&2")
         .pipe_stderr(cmd!("sed", "s/^/ERR: /")) // stderr → stdout (prefix errors)
@@ -36,15 +36,15 @@ fn main() -> Result<()> {
         .pipe_both(cmd!("sort")) // both → stdout (sort all)
         .output()?;
 
-    echo!("   Mixed processing result:");
+    println!("   Mixed processing result:");
     for line in mixed_result.lines() {
-        echo!("     {}", line);
+        println!("     {}", line);
     }
-    echo!();
+    println!();
 
     // Example 3: Alternating pipe modes
-    echo!("3. Alternating Pipe Modes:");
-    echo!("   stdout → stderr → stdout → both sequence");
+    println!("3. Alternating Pipe Modes:");
+    println!("   stdout → stderr → stdout → both sequence");
 
     let alternating_result = cmd!("echo", "start")
         .pipe(cmd!(
@@ -61,15 +61,15 @@ fn main() -> Result<()> {
         .pipe_both(cmd!("wc", "-l")) // both → stdout (count all lines)
         .output()?;
 
-    echo!(
-        "   Line count from alternating pipeline:",
+    println!(
+        "   Line count from alternating pipeline: {}",
         alternating_result.trim()
     );
-    echo!();
+    println!();
 
     // Example 4: Data filtering example
-    echo!("4. Simple Data Filtering:");
-    echo!("   Generate data → Filter valid/invalid → Mark and combine");
+    println!("4. Simple Data Filtering:");
+    println!("   Generate data → Filter valid/invalid → Mark and combine");
 
     let data = "item1\nbad@item\nitem2\nitem3";
     let filtered_result = cmd!("grep", "-E", "^[a-z0-9]+$")
@@ -81,15 +81,15 @@ fn main() -> Result<()> {
         .input(data)
         .output()?;
 
-    echo!("   Filtered valid items:");
+    println!("   Filtered valid items:");
     for line in filtered_result.lines() {
-        echo!("     {}", line);
+        println!("     {}", line);
     }
-    echo!();
+    println!();
 
     // Example 5: Error counting pipeline
-    echo!("5. Error Counting Pipeline:");
-    echo!("   Generate mixed output → Count errors via stderr → Format result");
+    println!("5. Error Counting Pipeline:");
+    println!("   Generate mixed output → Count errors via stderr → Format result");
 
     let error_count = cmd!(
         "sh",
@@ -100,14 +100,14 @@ fn main() -> Result<()> {
     .pipe(cmd!("sh", "-c", "read count; echo \"Found $count errors\""))
     .output()?;
 
-    echo!("   Error counting result:", error_count.trim());
+    println!("   Error counting result: {}", error_count.trim());
 
-    echo!("\n🎉 Mixed pipe modes examples completed!");
-    echo!("Key concepts demonstrated:");
-    echo!("  • pipe_stderr() - Routes stderr to next command's stdin");
-    echo!("  • pipe_both() - Routes both stdout+stderr to next command's stdin");
-    echo!("  • pipe() - Routes stdout to next command's stdin (default)");
-    echo!("  • Mixed sequences allow complex data processing flows");
+    println!("\n🎉 Mixed pipe modes examples completed!");
+    println!("Key concepts demonstrated:");
+    println!("  • pipe_stderr() - Routes stderr to next command's stdin");
+    println!("  • pipe_both() - Routes both stdout+stderr to next command's stdin");
+    println!("  • pipe() - Routes stdout to next command's stdin (default)");
+    println!("  • Mixed sequences allow complex data processing flows");
 
     Ok(())
 }

@@ -11,59 +11,59 @@
 use scriptify::*;
 
 fn main() -> Result<()> {
-    echo!("🛡️ Error Handling Best Practices");
-    echo!("===============================\n");
+    println!("🛡️ Error Handling Best Practices");
+    println!("===============================\n");
 
     // 1. Basic error handling patterns
-    echo!("1. Basic error handling:");
+    println!("1. Basic error handling:");
     basic_error_handling()?;
 
     // 2. Output capture error handling
-    echo!("\n2. Output capture error handling:");
+    println!("\n2. Output capture error handling:");
     output_capture_error_handling()?;
 
     // 3. Conditional error handling
-    echo!("\n3. Conditional error handling:");
+    println!("\n3. Conditional error handling:");
     conditional_error_handling()?;
 
-    echo!("\n🎉 Error handling tutorial completed!");
+    println!("\n🎉 Error handling tutorial completed!");
     Ok(())
 }
 
 fn basic_error_handling() -> Result<()> {
-    echo!("📝 Basic error handling patterns:");
+    println!("📝 Basic error handling patterns:");
 
     // Pattern 1: Using match statement
-    echo!("\n🔍 Pattern 1: Match statement handling");
+    println!("\n🔍 Pattern 1: Match statement handling");
     match cmd!("nonexistent_command").run() {
-        Ok(_) => echo!("✅ Command succeeded"),
-        Err(e) => echo!("❌ Command failed:", e),
+        Ok(_) => println!("✅ Command succeeded"),
+        Err(e) => println!("❌ Command failed: {}", e),
     }
 
     // Pattern 2: Using if let
-    echo!("\n🔍 Pattern 2: if let handling");
+    println!("\n🔍 Pattern 2: if let handling");
     if let Err(e) = cmd!("another_nonexistent_command").quiet().run() {
-        echo!("❌ Silent failure:", e);
+        println!("❌ Silent failure: {}", e);
     }
 
     // Pattern 3: Using unwrap_or_else
-    echo!("\n🔍 Pattern 3: Default value handling");
+    println!("\n🔍 Pattern 3: Default value handling");
     let output = cmd!("nonexistent_command")
         .quiet()
         .output()
         .unwrap_or_else(|_| "default value".to_string());
-    echo!("📤 Output (using default):", output);
+    println!("📤 Output (using default): {}", output);
 
     Ok(())
 }
 
 fn output_capture_error_handling() -> Result<()> {
-    echo!("📤 Output capture error handling:");
+    println!("📤 Output capture error handling:");
 
     // Handle successful output capture
     match cmd!("echo", "Hello, scriptify!").output() {
-        Ok(output) => echo!("✅ Output:", output.trim()),
-        Err(e) => echo!("❌ Failed to capture output:", e),
+        Ok(output) => println!("✅ Output: {}", output.trim()),
+        Err(e) => println!("❌ Failed to capture output: {}", e),
     }
 
     // Handle output capture from failing command
@@ -71,33 +71,33 @@ fn output_capture_error_handling() -> Result<()> {
         .quiet()
         .output()
     {
-        Ok(output) => echo!("✅ Output:", output),
-        Err(e) => echo!("❌ Output capture failed:", e),
+        Ok(output) => println!("✅ Output: {}", output),
+        Err(e) => println!("❌ Output capture failed: {}", e),
     }
 
     Ok(())
 }
 
 fn conditional_error_handling() -> Result<()> {
-    echo!("🔀 Conditional error handling:");
+    println!("🔀 Conditional error handling:");
 
     // Command availability checking
-    echo!("🖥️ Command availability checking:");
+    println!("🖥️ Command availability checking:");
 
     // Check if a command exists before using it
     match cmd!("which", "git").quiet().run() {
         Ok(_) => {
-            echo!("✅ Git is available");
+            println!("✅ Git is available");
             cmd!("git", "--version").run()?;
         }
         Err(_) => {
-            echo!("⚠️ Git not found");
-            echo!("💡 Continuing without git functionality");
+            println!("⚠️ Git not found");
+            println!("💡 Continuing without git functionality");
         }
     }
 
     // File existence checking with error handling
-    echo!("\n📁 File existence checking:");
+    println!("\n📁 File existence checking:");
     let test_files = ["Cargo.toml", "nonexistent.txt", "README.md"];
 
     for file in &test_files {
@@ -108,18 +108,18 @@ fn conditional_error_handling() -> Result<()> {
     }
 
     // Graceful degradation example with file operations
-    echo!("\n🔧 Graceful degradation:");
+    println!("\n🔧 Graceful degradation:");
     match cmd!("cat", "nonexistent.txt").quiet().output() {
         Ok(content) => {
-            echo!("✅ File read successfully");
-            echo!(
-                "Content preview:",
+            println!("✅ File read successfully");
+            println!(
+                "Content preview: {}",
                 &content[..std::cmp::min(50, content.len())]
             );
         }
         Err(_) => {
-            echo!("⚠️ File not found, using default behavior");
-            echo!("💡 Continuing with default configuration");
+            println!("⚠️ File not found, using default behavior");
+            println!("💡 Continuing with default configuration");
         }
     }
 

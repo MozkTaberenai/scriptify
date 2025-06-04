@@ -88,7 +88,7 @@
 //!     .pipe(cmd!("grep", "rust"))
 //!     .pipe(cmd!("wc", "-l"))
 //!     .output()?;
-//! echo!("Rust processes:", result.trim());
+//! println!("Rust processes: {}", result.trim());
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 //!
@@ -122,7 +122,7 @@
 //! use scriptify::*;
 //!
 //! fn main() -> Result<()> {
-//!     echo!("Hello, scriptify!");
+//!     println!("Hello, scriptify!");
 //!     cmd!("echo", "Hello from the shell!").run()?;
 //!     Ok(())
 //! }
@@ -155,20 +155,20 @@
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 //!
-//! ### The echo! Macro
+//! ### Output
 //!
-//! Use `echo!` for formatted output with automatic spacing:
+//! Use standard Rust printing macros for output:
 //!
 //! ```no_run
 //! use scriptify::*;
 //!
-//! echo!("Simple message");
-//! echo!("Value:", 42);
-//! echo!("Multiple", "arguments", "work", "too");
+//! println!("Simple message");
+//! println!("Value: {}", 42);
+//! eprintln!("Debug information");
 //!
 //! let name = "Alice";
 //! let age = 30;
-//! echo!("User:", name, "Age:", age);
+//! println!("User: {} Age: {}", name, age);
 //! ```
 //!
 //! ### Builder Pattern
@@ -198,20 +198,20 @@
 //! let result = cmd!("sort")
 //!     .input("banana\napple\ncherry\n")
 //!     .output()?;
-//! echo!("Sorted fruits:", result.trim());
+//! println!("Sorted fruits: {}", result.trim());
 //!
 //! // Pipe with input
 //! let result = cmd!("tr", "[:lower:]", "[:upper:]")
 //!     .input("hello world")
 //!     .output()?;
-//! echo!("Uppercase:", result.trim());
+//! println!("Uppercase: {}", result.trim());
 //!
 //! // Reading from files and processing
 //! let file_content = fs::read_to_string("Cargo.toml")?;
 //! let line_count = cmd!("wc", "-l")
 //!     .input(&file_content)
 //!     .output()?;
-//! echo!("Lines in Cargo.toml:", line_count.trim());
+//! println!("Lines in Cargo.toml: {}", line_count.trim());
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 //!
@@ -271,7 +271,7 @@
 //! // Basic file operations
 //! fs::write("config.txt", "debug=true\nport=8080")?;
 //! let content = fs::read_to_string("config.txt")?;
-//! echo!("Config content:", content);
+//! println!("Config content: {}", content);
 //!
 //! // Directory operations
 //! fs::create_dir_all("project/src")?;
@@ -282,9 +282,9 @@
 //!     let entry = entry?;
 //!     let path = entry.path();
 //!     if path.is_dir() {
-//!         echo!("Directory:", path.display());
+//!         println!("Directory: {}", path.display());
 //!     } else {
-//!         echo!("File:", path.display());
+//!         println!("File: {}", path.display());
 //!     }
 //! }
 //!
@@ -303,16 +303,16 @@
 //!
 //! // Handle command failures gracefully
 //! match cmd!("nonexistent-command").run() {
-//!     Ok(_) => echo!("Command succeeded"),
-//!     Err(e) => echo!("Command failed:", e),
+//!     Ok(_) => println!("Command succeeded"),
+//!     Err(e) => println!("Command failed: {}", e),
 //! }
 //!
 //! // Check command availability
 //! if cmd!("which", "git").run().is_ok() {
-//!     echo!("Git is available");
+//!     println!("Git is available");
 //!     cmd!("git", "--version").run()?;
 //! } else {
-//!     echo!("Git not found - please install it");
+//!     println!("Git not found - please install it");
 //! }
 //!
 //! // Use the ? operator for early returns
@@ -320,7 +320,7 @@
 //!     cmd!("cargo", "build", "--release").run()?;
 //!     cmd!("docker", "build", "-t", "myapp", ".").run()?;
 //!     cmd!("docker", "push", "myapp").run()?;
-//!     echo!("Deployment complete!");
+//!     println!("Deployment complete!");
 //!     Ok(())
 //! }
 //! # deploy_app().ok();
@@ -363,7 +363,7 @@
 //!
 //! // Get output without showing the command
 //! let output = cmd!("whoami").quiet().output()?;
-//! echo!("Current user:", output.trim());
+//! println!("Current user: {}", output.trim());
 //!
 //! // Global quiet mode using environment
 //! unsafe {
@@ -409,7 +409,7 @@
 //!
 //! // Get output without showing the command
 //! let output = cmd!("whoami").quiet().output()?;
-//! echo!("Current user:", output.trim());
+//! println!("Current user: {}", output.trim());
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 //!
@@ -421,7 +421,7 @@
 //! use scriptify::*;
 //!
 //! fn main() -> Result<()> {
-//!     echo!("Building project...");
+//!     println!("Building project...");
 //!     
 //!     // Clean previous build
 //!     if fs::metadata("target").is_ok() {
@@ -438,7 +438,7 @@
 //!     fs::create_dir_all("dist")?;
 //!     fs::copy("target/release/myapp", "dist/myapp")?;
 //!     
-//!     echo!("Build complete! Binary available in dist/");
+//!     println!("Build complete! Binary available in dist/");
 //!     Ok(())
 //! }
 //! ```
@@ -449,13 +449,13 @@
 //! use scriptify::*;
 //!
 //! fn analyze_logs() -> Result<()> {
-//!     echo!("Analyzing web server logs...");
+//!     println!("Analyzing web server logs...");
 //!     
 //!     // Count total requests
 //!     let total = cmd!("wc", "-l")
 //!         .input(&fs::read_to_string("/var/log/nginx/access.log")?)
 //!         .output()?;
-//!     echo!("Total requests:", total.trim());
+//!     println!("Total requests: {}", total.trim());
 //!     
 //!     // Find top IPs
 //!     let top_ips = cmd!("cut", "-d", " ", "-f", "1")
@@ -466,8 +466,8 @@
 //!         .input(&fs::read_to_string("/var/log/nginx/access.log")?)
 //!         .output()?;
 //!     
-//!     echo!("Top 10 IPs:");
-//!     echo!(top_ips);
+//!     println!("Top 10 IPs:");
+//!     println!("{}", top_ips);
 //!     
 //!     Ok(())
 //! }
@@ -479,11 +479,11 @@
 //! use scriptify::*;
 //!
 //! fn system_info() -> Result<()> {
-//!     echo!("=== System Information ===");
+//!     println!("=== System Information ===");
 //!     
 //!     // OS information
 //!     let os = cmd!("uname", "-a").output()?;
-//!     echo!("OS:", os.trim());
+//!     println!("OS: {}", os.trim());
 //!     
 //!     // Memory usage
 //!     cmd!("free", "-h").run()?;
@@ -495,7 +495,7 @@
 //!     let process_count = cmd!("ps", "aux")
 //!         .pipe(cmd!("wc", "-l"))
 //!         .output()?;
-//!     echo!("Running processes:", process_count.trim());
+//!     println!("Running processes: {}", process_count.trim());
 //!     
 //!     Ok(())
 //! }
@@ -513,9 +513,9 @@
 //! // Good: Handle errors appropriately
 //! fn safe_operation() -> Result<()> {
 //!     match cmd!("risky-command").run() {
-//!         Ok(_) => echo!("Operation succeeded"),
+//!         Ok(_) => println!("Operation succeeded"),
 //!         Err(e) => {
-//!             echo!("Operation failed:", e);
+//!             println!("Operation failed: {}", e);
 //!             // Implement fallback or recovery
 //!             cmd!("fallback-command").run()?;
 //!         }
@@ -538,7 +538,7 @@
 //!     .pipe(cmd!("xargs", "grep", "ERROR"))
 //!     .pipe(cmd!("wc", "-l"))
 //!     .output()?;
-//! echo!("Error count:", result.trim());
+//! println!("Error count: {}", result.trim());
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 //!
@@ -638,8 +638,7 @@ pub use cmd::*;
 
 pub mod fs;
 
-mod echo;
-pub use echo::*;
+mod output;
 
 pub mod color;
 mod style;

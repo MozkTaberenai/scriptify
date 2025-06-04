@@ -12,50 +12,53 @@
 use scriptify::*;
 
 fn main() -> Result<()> {
-    echo!("🔀 Advanced Pipe Mode Control");
-    echo!("============================\n");
+    println!("🔀 Advanced Pipe Mode Control");
+    println!("============================\n");
 
     // Example 1: Default stdout piping
-    echo!("1. Default stdout piping:");
+    println!("1. Default stdout piping:");
     let output = cmd!("echo", "hello world")
         .pipe(cmd!("tr", "[:lower:]", "[:upper:]"))
         .output()?;
-    echo!("   Output:", output.trim());
-    echo!();
+    println!("   Output: {}", output.trim());
+    println!();
 
     // Example 2: Stderr piping
-    echo!("2. Stderr piping:");
-    echo!("   Command: Generate error message and count its characters");
+    println!("2. Stderr piping:");
+    println!("   Command: Generate error message and count its characters");
     let error_char_count = cmd!("sh", "-c", "echo 'Error: Something went wrong!' >&2")
         .pipe_stderr(cmd!("wc", "-c"))
         .output()?;
-    echo!("   Error message character count:", error_char_count.trim());
-    echo!();
+    println!(
+        "   Error message character count: {}",
+        error_char_count.trim()
+    );
+    println!();
 
     // Example 3: Both stdout and stderr piping
-    echo!("3. Combined stdout+stderr piping:");
-    echo!("   Command: Generate both outputs and sort them together");
+    println!("3. Combined stdout+stderr piping:");
+    println!("   Command: Generate both outputs and sort them together");
     let combined_output = cmd!("sh", "-c", "echo 'stdout line'; echo 'stderr line' >&2")
         .pipe_both(cmd!("sort"))
         .output()?;
-    echo!("   Combined and sorted output:");
+    println!("   Combined and sorted output:");
     for line in combined_output.lines() {
         println!("     {}", line);
     }
-    echo!();
+    println!();
 
     // Example 4: Mixed pipe modes in a single pipeline
-    echo!("4. Mixed pipe modes in a single pipeline:");
+    println!("4. Mixed pipe modes in a single pipeline:");
     let mixed_output = cmd!("sh", "-c", "echo 'stdout'; echo 'stderr' >&2")
         .pipe_stderr(cmd!("sed", "s/stderr/processed_stderr/"))
         .pipe(cmd!("cat"))
         .output()?;
-    echo!("   Mixed pipeline output:", mixed_output.trim());
-    echo!();
+    println!("   Mixed pipeline output: {}", mixed_output.trim());
+    println!();
 
     // Example 5: Error processing pipeline
-    echo!("5. Error processing pipeline:");
-    echo!("   Command: Generate multiple error lines and count them");
+    println!("5. Error processing pipeline:");
+    println!("   Command: Generate multiple error lines and count them");
     let error_lines = cmd!(
         "sh",
         "-c",
@@ -63,12 +66,12 @@ fn main() -> Result<()> {
     )
     .pipe_stderr(cmd!("wc", "-l"))
     .output()?;
-    echo!("   Number of error lines:", error_lines.trim());
-    echo!();
+    println!("   Number of error lines: {}", error_lines.trim());
+    println!();
 
     // Example 6: Complex stderr processing
-    echo!("6. Complex stderr processing:");
-    echo!("   Command: Filter specific errors from stderr");
+    println!("6. Complex stderr processing:");
+    println!("   Command: Filter specific errors from stderr");
     let filtered_errors = cmd!(
         "sh",
         "-c",
@@ -76,10 +79,10 @@ fn main() -> Result<()> {
     )
     .pipe_stderr(cmd!("grep", "ERROR"))
     .output()?;
-    echo!("   Filtered errors:", filtered_errors.trim());
+    println!("   Filtered errors: {}", filtered_errors.trim());
 
-    echo!("\n🎉 Pipe modes tutorial completed!");
-    echo!("Next, try complex_pipes.rs for advanced pipeline techniques");
+    println!("\n🎉 Pipe modes tutorial completed!");
+    println!("Next, try complex_pipes.rs for advanced pipeline techniques");
 
     Ok(())
 }

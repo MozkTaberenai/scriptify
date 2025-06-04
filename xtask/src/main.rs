@@ -77,22 +77,22 @@ fn generate_readme(force: bool) -> Result<()> {
 
 fn run_precommit(verbose: bool) -> Result<()> {
     if !verbose {
-        echo!("🔍 Running pre-commit checks...");
+        println!("🔍 Running pre-commit checks...");
     }
     let project_root = get_project_root()?;
 
     // Run tests first
     if !verbose {
-        echo!("🧪 Running tests...");
+        println!("🧪 Running tests...");
     }
     cmd!("cargo", "test").current_dir(&project_root).run()?;
     if !verbose {
-        echo!("✅ Tests passed!");
+        println!("✅ Tests passed!");
     }
 
     // Run comprehensive clippy
     if !verbose {
-        echo!("📎 Running comprehensive clippy checks...");
+        println!("📎 Running comprehensive clippy checks...");
     }
     cmd!(
         "cargo",
@@ -106,21 +106,21 @@ fn run_precommit(verbose: bool) -> Result<()> {
     .current_dir(&project_root)
     .run()?;
     if !verbose {
-        echo!("✅ Clippy checks passed!");
+        println!("✅ Clippy checks passed!");
     }
 
     // Format code
     if !verbose {
-        echo!("🎨 Formatting code...");
+        println!("🎨 Formatting code...");
     }
     cmd!("cargo", "fmt").current_dir(&project_root).run()?;
     if !verbose {
-        echo!("✅ Code formatted!");
+        println!("✅ Code formatted!");
     }
 
     if !verbose {
-        echo!("🎉 Pre-commit checks completed successfully!");
-        echo!("✅ Ready to commit!");
+        println!("🎉 Pre-commit checks completed successfully!");
+        println!("✅ Ready to commit!");
     }
 
     Ok(())
@@ -128,22 +128,22 @@ fn run_precommit(verbose: bool) -> Result<()> {
 
 fn run_ci(verbose: bool) -> Result<()> {
     if !verbose {
-        echo!("🚀 Running full CI pipeline...");
+        println!("🚀 Running full CI pipeline...");
     }
     let project_root = get_project_root()?;
 
     // Format code first
     if !verbose {
-        echo!("🎨 Formatting code...");
+        println!("🎨 Formatting code...");
     }
     cmd!("cargo", "fmt").current_dir(&project_root).run()?;
     if !verbose {
-        echo!("✅ Code formatted!");
+        println!("✅ Code formatted!");
     }
 
     // Run static analysis
     if !verbose {
-        echo!("📎 Running clippy lints...");
+        println!("📎 Running clippy lints...");
     }
     cmd!(
         "cargo",
@@ -157,40 +157,40 @@ fn run_ci(verbose: bool) -> Result<()> {
     .current_dir(&project_root)
     .run()?;
     if !verbose {
-        echo!("✅ Clippy checks passed!");
+        println!("✅ Clippy checks passed!");
     }
 
     // Check compilation
     if !verbose {
-        echo!("🔍 Running cargo check...");
+        println!("🔍 Running cargo check...");
     }
     cmd!("cargo", "check", "--all-targets")
         .current_dir(&project_root)
         .run()?;
     if !verbose {
-        echo!("✅ Check passed!");
+        println!("✅ Check passed!");
     }
 
     // Run tests
     if !verbose {
-        echo!("🧪 Running tests...");
+        println!("🧪 Running tests...");
     }
     cmd!("cargo", "test").current_dir(&project_root).run()?;
     if !verbose {
-        echo!("✅ Tests passed!");
+        println!("✅ Tests passed!");
     }
 
     // Generate documentation
     generate_readme(false)?;
 
     if !verbose {
-        echo!("🎉 All CI tasks completed successfully!");
-        echo!("🔍 Summary:");
-        echo!("  ✅ Code formatting");
-        echo!("  ✅ Clippy lints");
-        echo!("  ✅ Compilation check");
-        echo!("  ✅ Test suite");
-        echo!("  ✅ README generation");
+        println!("🎉 All CI tasks completed successfully!");
+        println!("🔍 Summary:");
+        println!("  ✅ Code formatting");
+        println!("  ✅ Clippy lints");
+        println!("  ✅ Compilation check");
+        println!("  ✅ Test suite");
+        println!("  ✅ README generation");
     }
 
     Ok(())

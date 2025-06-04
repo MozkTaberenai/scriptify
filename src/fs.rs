@@ -1,18 +1,25 @@
 //! File system operations.
 //!
-//! This module provides wrappers around `std::fs` functions that echo the operation to the console.
+//! This module provides wrappers around `std::fs` functions that optionally echo the operation to the console.
 //! It offers a set of functions for working with files and directories.
 //!
 //! For more information on the behavior of these functions, see the documentation for the corresponding
 //! functions in [`std::fs`].
 
+use crate::output::{conditional_eprintln, should_echo};
 use crate::style::{BOLD_CYAN, BOLD_UNDERLINE, BRIGHT_BLACK};
 use std::path::Path;
 
-fn echo(op: impl std::fmt::Display) -> crate::Echo {
-    crate::Echo::new()
-        .sput("fs", BRIGHT_BLACK)
-        .sput(op, BOLD_CYAN)
+fn echo_operation(op: &str, details: &str) {
+    if should_echo() {
+        let styled_fs = format!("{BRIGHT_BLACK}fs{BRIGHT_BLACK:#}");
+        let styled_op = format!("{BOLD_CYAN}{op}{BOLD_CYAN:#}");
+        let styled_details = format!("{BOLD_UNDERLINE}{details}{BOLD_UNDERLINE:#}");
+        conditional_eprintln(format_args!(
+            "{} {} {}",
+            styled_fs, styled_op, styled_details
+        ));
+    }
 }
 
 /// Copy the contents of one file to another.
@@ -21,11 +28,7 @@ fn echo(op: impl std::fmt::Display) -> crate::Echo {
 pub fn copy(from: impl AsRef<Path>, to: impl AsRef<Path>) -> std::io::Result<u64> {
     let from = from.as_ref();
     let to = to.as_ref();
-    echo("copy")
-        .sput(from.to_string_lossy(), BOLD_UNDERLINE)
-        .put("->")
-        .sput(to.to_string_lossy(), BOLD_UNDERLINE)
-        .end();
+    echo_operation("copy", &format!("{} -> {}", from.display(), to.display()));
     std::fs::copy(from, to)
 }
 
@@ -34,9 +37,7 @@ pub fn copy(from: impl AsRef<Path>, to: impl AsRef<Path>) -> std::io::Result<u64
 /// This is a wrapper around [`std::fs::create_dir`] that echoes the operation to the console.
 pub fn create_dir(path: impl AsRef<Path>) -> std::io::Result<()> {
     let path = path.as_ref();
-    echo("create_dir")
-        .sput(path.to_string_lossy(), BOLD_UNDERLINE)
-        .end();
+    echo_operation("create_dir", &path.display().to_string());
     std::fs::create_dir(path)
 }
 
@@ -45,9 +46,7 @@ pub fn create_dir(path: impl AsRef<Path>) -> std::io::Result<()> {
 /// This is a wrapper around [`std::fs::create_dir_all`] that echoes the operation to the console.
 pub fn create_dir_all(path: impl AsRef<Path>) -> std::io::Result<()> {
     let path = path.as_ref();
-    echo("create_dir_all")
-        .sput(path.to_string_lossy(), BOLD_UNDERLINE)
-        .end();
+    echo_operation("create_dir_all", &path.display().to_string());
     std::fs::create_dir_all(path)
 }
 
@@ -57,11 +56,10 @@ pub fn create_dir_all(path: impl AsRef<Path>) -> std::io::Result<()> {
 pub fn hard_link(original: impl AsRef<Path>, link: impl AsRef<Path>) -> std::io::Result<()> {
     let original = original.as_ref();
     let link = link.as_ref();
-    echo("hard_link")
-        .sput(original.to_string_lossy(), BOLD_UNDERLINE)
-        .put("->")
-        .sput(link.to_string_lossy(), BOLD_UNDERLINE)
-        .end();
+    echo_operation(
+        "hard_link",
+        &format!("{} -> {}", original.display(), link.display()),
+    );
     std::fs::hard_link(original, link)
 }
 
@@ -70,9 +68,7 @@ pub fn hard_link(original: impl AsRef<Path>, link: impl AsRef<Path>) -> std::io:
 /// This is a wrapper around [`std::fs::metadata`] that echoes the operation to the console.
 pub fn metadata(path: impl AsRef<Path>) -> std::io::Result<std::fs::Metadata> {
     let path = path.as_ref();
-    echo("metadata")
-        .sput(path.to_string_lossy(), BOLD_UNDERLINE)
-        .end();
+    echo_operation("metadata", &path.display().to_string());
     std::fs::metadata(path)
 }
 
@@ -81,9 +77,7 @@ pub fn metadata(path: impl AsRef<Path>) -> std::io::Result<std::fs::Metadata> {
 /// This is a wrapper around [`std::fs::read`] that echoes the operation to the console.
 pub fn read(path: impl AsRef<Path>) -> std::io::Result<Vec<u8>> {
     let path = path.as_ref();
-    echo("read")
-        .sput(path.to_string_lossy(), BOLD_UNDERLINE)
-        .end();
+    echo_operation("read", &path.display().to_string());
     std::fs::read(path)
 }
 
@@ -92,9 +86,7 @@ pub fn read(path: impl AsRef<Path>) -> std::io::Result<Vec<u8>> {
 /// This is a wrapper around [`std::fs::read_dir`] that echoes the operation to the console.
 pub fn read_dir(path: impl AsRef<Path>) -> std::io::Result<std::fs::ReadDir> {
     let path = path.as_ref();
-    echo("read_dir")
-        .sput(path.to_string_lossy(), BOLD_UNDERLINE)
-        .end();
+    echo_operation("read_dir", &path.display().to_string());
     std::fs::read_dir(path)
 }
 
@@ -103,9 +95,7 @@ pub fn read_dir(path: impl AsRef<Path>) -> std::io::Result<std::fs::ReadDir> {
 /// This is a wrapper around [`std::fs::read_to_string`] that echoes the operation to the console.
 pub fn read_to_string(path: impl AsRef<Path>) -> std::io::Result<String> {
     let path = path.as_ref();
-    echo("read_to_string")
-        .sput(path.to_string_lossy(), BOLD_UNDERLINE)
-        .end();
+    echo_operation("read_to_string", &path.display().to_string());
     std::fs::read_to_string(path)
 }
 
@@ -114,9 +104,7 @@ pub fn read_to_string(path: impl AsRef<Path>) -> std::io::Result<String> {
 /// This is a wrapper around [`std::fs::remove_dir`] that echoes the operation to the console.
 pub fn remove_dir(path: impl AsRef<Path>) -> std::io::Result<()> {
     let path = path.as_ref();
-    echo("remove_dir")
-        .sput(path.to_string_lossy(), BOLD_UNDERLINE)
-        .end();
+    echo_operation("remove_dir", &path.display().to_string());
     std::fs::remove_dir(path)
 }
 
@@ -125,9 +113,7 @@ pub fn remove_dir(path: impl AsRef<Path>) -> std::io::Result<()> {
 /// This is a wrapper around [`std::fs::remove_dir_all`] that echoes the operation to the console.
 pub fn remove_dir_all(path: impl AsRef<Path>) -> std::io::Result<()> {
     let path = path.as_ref();
-    echo("remove_dir_all")
-        .sput(path.to_string_lossy(), BOLD_UNDERLINE)
-        .end();
+    echo_operation("remove_dir_all", &path.display().to_string());
     std::fs::remove_dir_all(path)
 }
 
@@ -136,9 +122,7 @@ pub fn remove_dir_all(path: impl AsRef<Path>) -> std::io::Result<()> {
 /// This is a wrapper around [`std::fs::remove_file`] that echoes the operation to the console.
 pub fn remove_file(path: impl AsRef<Path>) -> std::io::Result<()> {
     let path = path.as_ref();
-    echo("remove_file")
-        .sput(path.to_string_lossy(), BOLD_UNDERLINE)
-        .end();
+    echo_operation("remove_file", &path.display().to_string());
     std::fs::remove_file(path)
 }
 
@@ -148,11 +132,7 @@ pub fn remove_file(path: impl AsRef<Path>) -> std::io::Result<()> {
 pub fn rename(from: impl AsRef<Path>, to: impl AsRef<Path>) -> std::io::Result<()> {
     let from = from.as_ref();
     let to = to.as_ref();
-    echo("rename")
-        .sput(from.to_string_lossy(), BOLD_UNDERLINE)
-        .put("->")
-        .sput(to.to_string_lossy(), BOLD_UNDERLINE)
-        .end();
+    echo_operation("rename", &format!("{} -> {}", from.display(), to.display()));
     std::fs::rename(from, to)
 }
 
@@ -161,10 +141,7 @@ pub fn rename(from: impl AsRef<Path>, to: impl AsRef<Path>) -> std::io::Result<(
 /// This is a wrapper around [`std::fs::set_permissions`] that echoes the operation to the console.
 pub fn set_permissions(path: impl AsRef<Path>, perm: std::fs::Permissions) -> std::io::Result<()> {
     let path = path.as_ref();
-    echo("set_permissions")
-        .sput(path.to_string_lossy(), BOLD_UNDERLINE)
-        .end();
-    // TODO: print the permission bits
+    echo_operation("set_permissions", &path.display().to_string());
     std::fs::set_permissions(path, perm)
 }
 
@@ -173,9 +150,7 @@ pub fn set_permissions(path: impl AsRef<Path>, perm: std::fs::Permissions) -> st
 /// This is a wrapper around [`std::fs::symlink_metadata`] that echoes the operation to the console.
 pub fn symlink_metadata(path: impl AsRef<Path>) -> std::io::Result<std::fs::Metadata> {
     let path = path.as_ref();
-    echo("symlink_metadata")
-        .sput(path.to_string_lossy(), BOLD_UNDERLINE)
-        .end();
+    echo_operation("symlink_metadata", &path.display().to_string());
     std::fs::symlink_metadata(path)
 }
 
@@ -185,10 +160,9 @@ pub fn symlink_metadata(path: impl AsRef<Path>) -> std::io::Result<std::fs::Meta
 pub fn write(path: impl AsRef<Path>, contents: impl AsRef<[u8]>) -> std::io::Result<()> {
     let path = path.as_ref();
     let contents = contents.as_ref();
-    echo("write")
-        .put(format_args!("{} bytes", contents.len()))
-        .put("->")
-        .sput(path.to_string_lossy(), BOLD_UNDERLINE)
-        .end();
+    echo_operation(
+        "write",
+        &format!("{} bytes -> {}", contents.len(), path.display()),
+    );
     std::fs::write(path, contents)
 }

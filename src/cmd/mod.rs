@@ -371,35 +371,45 @@ impl Cmd {
     }
 
     fn echo_command(&self) {
-        let mut echo = crate::Echo::new();
-        echo = echo.sput("cmd", BRIGHT_BLACK);
-
-        if let Some(current_dir) = &self.current_dir {
-            let quoted_dir = Self::quote_argument(current_dir.as_os_str());
-            echo = echo
-                .sput("cd:", BRIGHT_BLUE)
-                .sput(quoted_dir, UNDERLINE_BRIGHT_BLUE);
+        if !crate::output::should_echo() {
+            return;
         }
 
+        let mut parts = Vec::new();
+
+        // Add cmd prefix
+        parts.push(format!("{BRIGHT_BLACK}cmd{BRIGHT_BLACK:#}"));
+
+        // Add current directory if set
+        if let Some(current_dir) = &self.current_dir {
+            let quoted_dir = Self::quote_argument(current_dir.as_os_str());
+            parts.push(format!("{BRIGHT_BLUE}cd:{BRIGHT_BLUE:#}"));
+            parts.push(format!(
+                "{UNDERLINE_BRIGHT_BLUE}{quoted_dir}{UNDERLINE_BRIGHT_BLUE:#}"
+            ));
+        }
+
+        // Add environment variables
         for (key, val) in &self.envs {
             let quoted_key = Self::quote_argument(key);
             let quoted_val = Self::quote_argument(val);
-            echo = echo
-                .sput("env:", BRIGHT_BLUE)
-                .sput(quoted_key, UNDERLINE_BRIGHT_BLUE)
-                .put("=")
-                .sput(quoted_val, UNDERLINE_BRIGHT_BLUE);
+            parts.push(format!("{BRIGHT_BLUE}env:{BRIGHT_BLUE:#}"));
+            parts.push(format!(
+                "{UNDERLINE_BRIGHT_BLUE}{quoted_key}={quoted_val}{UNDERLINE_BRIGHT_BLUE:#}"
+            ));
         }
 
+        // Add program
         let quoted_program = Self::quote_argument(&self.program);
-        echo = echo.sput(quoted_program, BOLD_CYAN);
+        parts.push(format!("{BOLD_CYAN}{quoted_program}{BOLD_CYAN:#}"));
 
+        // Add arguments
         for arg in &self.args {
             let quoted_arg = Self::quote_argument(arg);
-            echo = echo.sput(quoted_arg, BOLD_UNDERLINE);
+            parts.push(format!("{BOLD_UNDERLINE}{quoted_arg}{BOLD_UNDERLINE:#}"));
         }
 
-        echo.end();
+        eprintln!("{}", parts.join(" "));
     }
 }
 
@@ -630,8 +640,14 @@ impl Pipeline {
     }
 
     fn echo_pipeline(&self) {
-        let mut echo = crate::Echo::new();
-        echo = echo.sput("cmd", BRIGHT_BLACK);
+        if !crate::output::should_echo() {
+            return;
+        }
+
+        let mut parts = Vec::new();
+
+        // Add cmd prefix
+        parts.push(format!("{BRIGHT_BLACK}cmd{BRIGHT_BLACK:#}"));
 
         for (i, (cmd, pipe_mode)) in self.connections.iter().enumerate() {
             if i > 0 {
@@ -640,36 +656,40 @@ impl Pipeline {
                     PipeMode::Stderr => "|&",
                     PipeMode::Both => "|&&",
                 };
-                echo = echo.sput(pipe_symbol, MAGENTA);
+                parts.push(format!("{MAGENTA}{pipe_symbol}{MAGENTA:#}"));
             }
 
+            // Add current directory if set
             if let Some(current_dir) = &cmd.current_dir {
                 let quoted_dir = Cmd::quote_argument(current_dir.as_os_str());
-                echo = echo
-                    .sput("cd:", BRIGHT_BLUE)
-                    .sput(quoted_dir, UNDERLINE_BRIGHT_BLUE);
+                parts.push(format!("{BRIGHT_BLUE}cd:{BRIGHT_BLUE:#}"));
+                parts.push(format!(
+                    "{UNDERLINE_BRIGHT_BLUE}{quoted_dir}{UNDERLINE_BRIGHT_BLUE:#}"
+                ));
             }
 
+            // Add environment variables
             for (key, val) in &cmd.envs {
                 let quoted_key = Cmd::quote_argument(key);
                 let quoted_val = Cmd::quote_argument(val);
-                echo = echo
-                    .sput("env:", BRIGHT_BLUE)
-                    .sput(quoted_key, UNDERLINE_BRIGHT_BLUE)
-                    .put("=")
-                    .sput(quoted_val, UNDERLINE_BRIGHT_BLUE);
+                parts.push(format!("{BRIGHT_BLUE}env:{BRIGHT_BLUE:#}"));
+                parts.push(format!(
+                    "{UNDERLINE_BRIGHT_BLUE}{quoted_key}={quoted_val}{UNDERLINE_BRIGHT_BLUE:#}"
+                ));
             }
 
+            // Add program
             let quoted_program = Cmd::quote_argument(&cmd.program);
-            echo = echo.sput(quoted_program, BOLD_CYAN);
+            parts.push(format!("{BOLD_CYAN}{quoted_program}{BOLD_CYAN:#}"));
 
+            // Add arguments
             for arg in &cmd.args {
                 let quoted_arg = Cmd::quote_argument(arg);
-                echo = echo.sput(quoted_arg, BOLD_UNDERLINE);
+                parts.push(format!("{BOLD_UNDERLINE}{quoted_arg}{BOLD_UNDERLINE:#}"));
             }
         }
 
-        echo.end();
+        eprintln!("{}", parts.join(" "));
     }
 }
 

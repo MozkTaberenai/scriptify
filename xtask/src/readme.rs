@@ -19,7 +19,7 @@ fn get_project_root() -> Result<PathBuf> {
 }
 
 pub fn generate_readme_with_options(force: bool) -> Result<()> {
-    echo!("🔧 Generating README.md...");
+    println!("🔧 Generating README.md...");
 
     let project_root = get_project_root()?;
     let lib_rs_path = project_root.join("src/lib.rs");
@@ -35,7 +35,7 @@ pub fn generate_readme_with_options(force: bool) -> Result<()> {
                 (lib_meta.modified(), readme_meta.modified())
             {
                 if readme_modified > lib_modified {
-                    echo!("✅ README.md is up to date (use --force to regenerate anyway)");
+                    println!("✅ README.md is up to date (use --force to regenerate anyway)");
                     return Ok(());
                 }
             }
@@ -59,8 +59,8 @@ pub fn generate_readme_with_options(force: bool) -> Result<()> {
     // Write to README.md
     fs::write(&readme_path, &readme_content)?;
 
-    echo!("✅ README.md generated successfully!");
-    echo!("📊 Generated with {} examples", examples.len());
+    println!("✅ README.md generated successfully!");
+    println!("📊 Generated with {} examples", examples.len());
 
     Ok(())
 }
