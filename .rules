@@ -1,0 +1,34 @@
+# AI Agent Instructions
+
+## Confirmation Principle
+
+Do not immediately implement requested changes to files; ask for confirmation of the changes first.
+
+## Implementation Principle
+
+When implementing requested content, avoid excessive implementation and limit changes to what is necessary and sufficient.
+
+## Project Information
+
+### Overview
+See `Cargo.toml` for official project metadata (name, description, version, etc.)
+
+### Technology Stack
+- **Language**: Rust 2024 Edition
+- **Target Platform**: Unix-like systems only
+- **Dependencies**: Minimal (see Cargo.toml)
+- **Testing**: Unit tests + integration tests + doc tests
+
+### File Layout
+```
+scriptify/
+├── src/
+│   ├── lib.rs              # Main library entry point
+│   ├── cmd/
+│   │   ├── mod.rs          # Command execution core
+│   │   └── tests/          # Unit tests by category
+│   └── output.rs           # Output handling utilities
+├── tests/                  # Integration tests
+├── examples/               # Example code by difficulty level
+└── Cargo.toml             # Project metadata and dependencies
+```
