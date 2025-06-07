@@ -77,7 +77,11 @@ fn conditional_pipelines() -> Result<()> {
     println!("\n📊 Processing based on content:");
 
     // Check if data has uppercase content
-    let has_uppercase = cmd!("grep", "[A-Z]").input(test_data).quiet().run().is_ok();
+    let has_uppercase = cmd!("grep", "[A-Z]")
+        .input(test_data)
+        .no_echo()
+        .run()
+        .is_ok();
 
     if has_uppercase {
         println!("✅ Data contains uppercase - applying case normalization");

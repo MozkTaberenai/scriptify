@@ -49,6 +49,9 @@ path = "examples/02_intermediate/pipe_modes.rs"
 [[example]]
 name = "mixed_pipe_modes"
 path = "examples/02_intermediate/mixed_pipe_modes.rs"
+[[example]]
+name = "reader_writer_demo"
+path = "examples/02_intermediate/reader_writer_demo.rs"
 
 # 03_advanced - Advanced examples
 [[example]]
@@ -60,6 +63,9 @@ path = "examples/03_advanced/command_quoting.rs"
 [[example]]
 name = "control_char_demo"
 path = "examples/03_advanced/control_char_demo.rs"
+[[example]]
+name = "streaming_io"
+path = "examples/03_advanced/streaming_io.rs"
 
 
 [package.metadata.docs.rs]

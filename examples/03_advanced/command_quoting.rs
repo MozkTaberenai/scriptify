@@ -61,7 +61,7 @@ fn main() {
     // Note: This would fail if the directory doesn't exist, so we just show the echo
     let _cmd = cmd!("echo", "in special dir")
         .current_dir("/tmp/test directory")
-        .quiet();
+        .no_echo();
     // Just demonstrate the echo formatting without actually running
     println!("Command would be echoed as shown above if directory existed");
     println!();
@@ -78,7 +78,7 @@ fn main() {
     // Demonstrate that actual command execution works correctly
     println!("11. Verifying that execution works correctly:");
     let output = cmd!("echo", "hello world", "from", "scriptify")
-        .quiet()
+        .no_echo()
         .output()
         .unwrap();
     println!("Captured output: '{}'", output.trim());

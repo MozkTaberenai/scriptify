@@ -42,14 +42,14 @@ fn basic_error_handling() -> Result<()> {
 
     // Pattern 2: Using if let
     println!("\n🔍 Pattern 2: if let handling");
-    if let Err(e) = cmd!("another_nonexistent_command").quiet().run() {
+    if let Err(e) = cmd!("another_nonexistent_command").no_echo().run() {
         println!("❌ Silent failure: {}", e);
     }
 
     // Pattern 3: Using unwrap_or_else
     println!("\n🔍 Pattern 3: Default value handling");
     let output = cmd!("nonexistent_command")
-        .quiet()
+        .no_echo()
         .output()
         .unwrap_or_else(|_| "default value".to_string());
     println!("📤 Output (using default): {}", output);
@@ -68,7 +68,7 @@ fn output_capture_error_handling() -> Result<()> {
 
     // Handle output capture from failing command
     match cmd!("sh", "-c", "echo 'stdout'; echo 'stderr' >&2; exit 1")
-        .quiet()
+        .no_echo()
         .output()
     {
         Ok(output) => println!("✅ Output: {}", output),
@@ -85,7 +85,7 @@ fn conditional_error_handling() -> Result<()> {
     println!("🖥️ Command availability checking:");
 
     // Check if a command exists before using it
-    match cmd!("which", "git").quiet().run() {
+    match cmd!("which", "git").no_echo().run() {
         Ok(_) => {
             println!("✅ Git is available");
             cmd!("git", "--version").run()?;
@@ -109,7 +109,7 @@ fn conditional_error_handling() -> Result<()> {
 
     // Graceful degradation example with file operations
     println!("\n🔧 Graceful degradation:");
-    match cmd!("cat", "nonexistent.txt").quiet().output() {
+    match cmd!("cat", "nonexistent.txt").no_echo().output() {
         Ok(content) => {
             println!("✅ File read successfully");
             println!(
