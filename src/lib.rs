@@ -147,7 +147,7 @@
 //! // Basic command
 //! cmd!("ls").run()?;
 //!
-//! // Command with arguments  
+//! // Command with arguments
 //! cmd!("ls", "-la").run()?;
 //!
 //! // Multiple arguments
@@ -182,7 +182,7 @@
 //!     .arg("logfile.txt")
 //!     .current_dir("/var/log")
 //!     .env("LANG", "C")
-//!     .quiet()
+//!     .no_echo()
 //!     .run()?;
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
@@ -198,7 +198,68 @@
 //! let result = cmd!("sort")
 //!     .input("banana\napple\ncherry\n")
 //!     .output()?;
-//! println!("Sorted fruits: {}", result.trim());
+//!
+//! // Using std::io::Read and Write traits for flexible I/O
+//! use std::fs::File;
+//! use std::io::Cursor;
+//!
+//! // Read from a file
+//! let input_file = File::open("data.txt")?;
+//! let result = cmd!("grep", "pattern")
+//!     .input_reader(input_file)
+//!     .output()?;
+//!
+//! // Use buffered reading for large files
+//! let large_file = File::open("large_data.txt")?;
+//! let result = cmd!("sort")
+//!     .input_buffered(large_file)
+//!     .output()?;
+//!
+//! // Stream output directly to a writer
+//! let output_file = File::create("results.txt")?;
+//! cmd!("ls", "-la")
+//!     .stream_to(output_file)?;
+//!
+//! // Combine reader and writer for streaming I/O
+//! let input_file = File::open("input.txt")?;
+//! let output_file = File::create("output.txt")?;
+//! cmd!("sort")
+//!     .run_with_io(input_file, output_file)?;
+//!
+//! // Use in-memory data with Cursor
+//! let data = "zebra\napple\nbanana";
+//! let cursor = Cursor::new(data);
+//! let mut output_buffer = Vec::new();
+//! cmd!("sort")
+//!     .run_with_io(cursor, &mut output_buffer)?;
+//! println!("Sorted: {}", String::from_utf8_lossy(&output_buffer));
+//!
+//! // Advanced: Use spawn_with_io for full control over I/O
+//! use std::thread;
+//! let spawn = cmd!("sort")
+//!     .pipe(cmd!("head", "-2"))
+//!     .spawn_with_io()?;
+//!
+//! // Handle input in separate thread
+//! if let Some(mut stdin) = spawn.stdin {
+//!     thread::spawn(move || {
+//!         use std::io::Write;
+//!         writeln!(stdin, "zebra").unwrap();
+//!         writeln!(stdin, "apple").unwrap();
+//!         writeln!(stdin, "banana").unwrap();
+//!     });
+//! }
+//!
+//! // Handle output
+//! if let Some(stdout) = spawn.stdout {
+//!     use std::io::{BufRead, BufReader};
+//!     let reader = BufReader::new(stdout);
+//!     for line in reader.lines() {
+//!         println!("Result: {}", line?);
+//!     }
+//! }
+//!
+//! spawn.handle.wait()?;
 //!
 //! // Pipe with input
 //! let result = cmd!("tr", "[:lower:]", "[:upper:]")
@@ -351,7 +412,7 @@
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 //!
-//! ### Quiet Mode
+//! ### No Echo Mode
 //!
 //! Sometimes you don't want to see the command output:
 //!
@@ -359,13 +420,13 @@
 //! use scriptify::*;
 //!
 //! // Run silently
-//! cmd!("git", "status").quiet().run()?;
+//! cmd!("git", "status").no_echo().run()?;
 //!
 //! // Get output without showing the command
-//! let output = cmd!("whoami").quiet().output()?;
+//! let output = cmd!("whoami").no_echo().output()?;
 //! println!("Current user: {}", output.trim());
 //!
-//! // Global quiet mode using environment
+//! // Global no echo mode using environment
 //! unsafe {
 //!     std::env::set_var("NO_ECHO", "1");
 //! }
@@ -397,7 +458,7 @@
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 //!
-//! ### Quiet Mode
+//! ### No Echo Mode
 //!
 //! Sometimes you don't want to see the command output:
 //!
@@ -405,10 +466,10 @@
 //! use scriptify::*;
 //!
 //! // Run silently
-//! cmd!("git", "status").quiet().run()?;
+//! cmd!("git", "status").no_echo().run()?;
 //!
 //! // Get output without showing the command
-//! let output = cmd!("whoami").quiet().output()?;
+//! let output = cmd!("whoami").no_echo().output()?;
 //! println!("Current user: {}", output.trim());
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
@@ -422,22 +483,22 @@
 //!
 //! fn main() -> Result<()> {
 //!     println!("Building project...");
-//!     
+//!
 //!     // Clean previous build
 //!     if fs::metadata("target").is_ok() {
 //!         fs::remove_dir_all("target")?;
 //!     }
-//!     
+//!
 //!     // Build in release mode
 //!     cmd!("cargo", "build", "--release").run()?;
-//!     
+//!
 //!     // Run tests
 //!     cmd!("cargo", "test").run()?;
-//!     
+//!
 //!     // Package the binary
 //!     fs::create_dir_all("dist")?;
 //!     fs::copy("target/release/myapp", "dist/myapp")?;
-//!     
+//!
 //!     println!("Build complete! Binary available in dist/");
 //!     Ok(())
 //! }
@@ -450,13 +511,13 @@
 //!
 //! fn analyze_logs() -> Result<()> {
 //!     println!("Analyzing web server logs...");
-//!     
+//!
 //!     // Count total requests
 //!     let total = cmd!("wc", "-l")
 //!         .input(&fs::read_to_string("/var/log/nginx/access.log")?)
 //!         .output()?;
 //!     println!("Total requests: {}", total.trim());
-//!     
+//!
 //!     // Find top IPs
 //!     let top_ips = cmd!("cut", "-d", " ", "-f", "1")
 //!         .pipe(cmd!("sort"))
@@ -465,10 +526,10 @@
 //!         .pipe(cmd!("head", "-10"))
 //!         .input(&fs::read_to_string("/var/log/nginx/access.log")?)
 //!         .output()?;
-//!     
+//!
 //!     println!("Top 10 IPs:");
 //!     println!("{}", top_ips);
-//!     
+//!
 //!     Ok(())
 //! }
 //! ```
@@ -480,23 +541,23 @@
 //!
 //! fn system_info() -> Result<()> {
 //!     println!("=== System Information ===");
-//!     
+//!
 //!     // OS information
 //!     let os = cmd!("uname", "-a").output()?;
 //!     println!("OS: {}", os.trim());
-//!     
+//!
 //!     // Memory usage
 //!     cmd!("free", "-h").run()?;
-//!     
+//!
 //!     // Disk usage
 //!     cmd!("df", "-h").run()?;
-//!     
+//!
 //!     // Running processes
 //!     let process_count = cmd!("ps", "aux")
 //!         .pipe(cmd!("wc", "-l"))
 //!         .output()?;
 //!     println!("Running processes: {}", process_count.trim());
-//!     
+//!
 //!     Ok(())
 //! }
 //! ```
